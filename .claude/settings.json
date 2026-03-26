@@ -1,0 +1,18 @@
+{
+  "permissions": {
+    "deny": [
+      "bash:cat ~/.ssh/*",
+      "bash:cat .env*",
+      "bash:cat *credentials*",
+      "bash:cat *secret*",
+      "bash:cat **/tokens.json",
+      "bash:cat ~/.config/gcloud/*",
+      "bash:cat ~/.aws/*",
+      "bash:cat ~/.kube/*",
+      "edit:.env",
+      "edit:.env.local",
+      "edit:**/credentials.json",
+      "edit:**/tokens.json"
+    ]
+  }
+}

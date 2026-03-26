@@ -1,0 +1,13 @@
+services:
+  phish-triage:
+    build: .
+    env_file:
+      - .env
+    volumes:
+      - ./src:/home/appuser/app/src
+      - ./tests:/home/appuser/app/tests
+    security_opt:
+      - no-new-privileges:true
+    read_only: true
+    tmpfs:
+      - /tmp

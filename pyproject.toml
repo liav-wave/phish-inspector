@@ -1,0 +1,28 @@
+[project]
+name = "phish-triage-mcp"
+version = "0.1.0"
+requires-python = ">=3.11"
+dependencies = [
+    "mcp==1.26.0",
+    "dnspython==2.7.0",
+    "httpx==0.28.1",
+    "python-dotenv==1.0.1",
+    "python-dateutil==2.9.0.post0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest==8.3.4",
+    "pytest-asyncio==0.24.0",
+    "pip-audit==2.7.3",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/phish_triage"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
