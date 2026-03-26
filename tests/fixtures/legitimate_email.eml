@@ -1,0 +1,37 @@
+Delivered-To: user@example.com
+Received: by 2002:a05:6a00:9999:0:0:0:0 with SMTP id c3csp9999999def;
+        Mon, 24 Mar 2026 10:05:15 -0700 (PDT)
+Received: from mail-wr1-f54.google.com (mail-wr1-f54.google.com. [209.85.221.54])
+        by mx.example.com with ESMTPS id ijk123lmn456
+        for <user@example.com>;
+        Mon, 24 Mar 2026 10:05:14 -0700 (PDT)
+Received: by mail-wr1-f54.google.com with SMTP id abc123
+        for <user@example.com>;
+        Mon, 24 Mar 2026 10:05:13 -0700 (PDT)
+Authentication-Results: mx.example.com;
+        spf=pass (example.com: domain of notifications@github.com designates 209.85.221.54 as permitted sender) smtp.mailfrom=notifications@github.com;
+        dkim=pass header.d=github.com header.s=google;
+        dmarc=pass (p=REJECT sp=REJECT dis=NONE) header.from=github.com
+DKIM-Signature: v=1; a=rsa-sha256; d=github.com; s=google;
+        h=from:to:subject:date:message-id;
+        b=validsignaturedata==
+From: "GitHub" <notifications@github.com>
+To: user@example.com
+Subject: [octocat/Hello-World] Pull request #42: Fix typo in README
+Date: Mon, 24 Mar 2026 17:05:00 +0000
+Message-ID: <pr42@github.com>
+Return-Path: <notifications@github.com>
+MIME-Version: 1.0
+Content-Type: text/plain; charset="UTF-8"
+X-GitHub-Recipient-Address: user@example.com
+
+@contributor opened a pull request:
+
+Fix typo in README.md
+
+Changed "teh" to "the" on line 15.
+
+View it on GitHub:
+https://github.com/octocat/Hello-World/pull/42
+
+You are receiving this because you are subscribed to this repository.

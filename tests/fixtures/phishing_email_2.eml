@@ -1,0 +1,60 @@
+Delivered-To: cfo@targetcorp.com
+Received: by 2002:a05:6a00:5678:0:0:0:0 with SMTP id b2csp7654321xyz;
+        Tue, 25 Mar 2026 14:22:10 -0700 (PDT)
+Received: from mail01.targetcorp.com (mail01.targetcorp.com. [93.184.216.34])
+        by mx.targetcorp.com with ESMTPS id xyz789abc012
+        for <cfo@targetcorp.com>;
+        Tue, 25 Mar 2026 14:22:09 -0700 (PDT)
+Received: from outbound.mailprovider.net (outbound.mailprovider.net [198.51.100.200])
+        by mail01.targetcorp.com (Postfix) with ESMTP id 5678EFGH
+        for <cfo@targetcorp.com>;
+        Tue, 25 Mar 2026 21:22:08 +0000 (UTC)
+Authentication-Results: mx.targetcorp.com;
+        spf=pass (targetcorp.com: domain of sarah.chen@targetcorp.com designates 198.51.100.200 as permitted sender) smtp.mailfrom=sarah.chen@targetcorp.com;
+        dkim=pass header.d=targetcorp.com header.s=selector1;
+        dmarc=pass (p=REJECT sp=REJECT dis=NONE) header.from=targetcorp.com
+ARC-Authentication-Results: i=1; mx.targetcorp.com;
+        spf=pass smtp.mailfrom=sarah.chen@targetcorp.com;
+        dkim=pass header.d=targetcorp.com;
+        dmarc=pass header.from=targetcorp.com
+DKIM-Signature: v=1; a=rsa-sha256; d=targetcorp.com; s=selector1;
+        h=from:to:subject:date:message-id;
+        b=validlookingsignature==
+From: "Sarah Chen - CEO" <sarah.chen@targetcorp.com>
+Reply-To: sarah.chen.ceo@protonmail.com
+To: cfo@targetcorp.com
+Subject: Re: Urgent wire transfer needed - confidential
+Date: Tue, 25 Mar 2026 21:22:00 +0000
+Message-ID: <msg456@targetcorp.com>
+Return-Path: <sarah.chen@targetcorp.com>
+MIME-Version: 1.0
+Content-Type: multipart/alternative; boundary="----=_Part_67890"
+X-Priority: 1
+
+------=_Part_67890
+Content-Type: text/plain; charset="UTF-8"
+
+Hi,
+
+Following up on our conversation earlier. I need you to process a wire transfer urgently. The details are in the secure document below — I've shared it through our new document portal.
+
+https://targetcorp-docs.com/shared/wire-transfer-details-q1
+
+Please process this before end of business today. I'm in meetings all afternoon so email me at my personal address if you have questions: sarah.chen.ceo@protonmail.com
+
+Thanks,
+Sarah
+
+------=_Part_67890
+Content-Type: text/html; charset="UTF-8"
+
+<html>
+<body>
+<p>Hi,</p>
+<p>Following up on our conversation earlier. I need you to process a wire transfer urgently. The details are in the secure document below — I've shared it through our new document portal.</p>
+<p><a href="https://targetcorp-docs.com/shared/wire-transfer-details-q1">https://docs.targetcorp.com/shared/wire-transfer-details</a></p>
+<p>Please process this before end of business today. I'm in meetings all afternoon so email me at my personal address if you have questions: sarah.chen.ceo@protonmail.com</p>
+<p>Thanks,<br/>Sarah</p>
+</body>
+</html>
+------=_Part_67890--

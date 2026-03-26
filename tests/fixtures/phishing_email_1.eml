@@ -1,0 +1,57 @@
+Delivered-To: victim@example.com
+Received: by 2002:a05:6a00:1234:0:0:0:0 with SMTP id a1csp1234567abc;
+        Wed, 26 Mar 2026 09:15:30 -0700 (PDT)
+Received: from mail-evil.example.net (mail-evil.example.net. [203.0.113.42])
+        by mx.example.com with ESMTPS id abc123def456
+        for <victim@example.com>;
+        Wed, 26 Mar 2026 09:15:29 -0700 (PDT)
+Received: from localhost (unknown [198.51.100.77])
+        by mail-evil.example.net (Postfix) with ESMTP id 1234ABCD
+        for <victim@example.com>;
+        Wed, 26 Mar 2026 16:15:28 +0000 (UTC)
+Authentication-Results: mx.example.com;
+        spf=fail (example.com: domain of noreply@paypa1-security.com does not designate 203.0.113.42 as permitted sender) smtp.mailfrom=noreply@paypa1-security.com;
+        dkim=none;
+        dmarc=fail (p=NONE sp=NONE dis=NONE) header.from=paypa1-security.com
+DKIM-Signature: v=1; a=rsa-sha256; d=paypa1-security.com; s=default;
+        h=from:to:subject:date:message-id;
+        b=fakesignaturedata==
+From: "PayPal Security Team" <noreply@paypa1-security.com>
+Reply-To: paypal-verify@gmail.com
+To: victim@example.com
+Subject: [URGENT] Your PayPal account has been compromised - Verify NOW
+Date: Wed, 26 Mar 2026 16:15:00 +0000
+Message-ID: <abc123@paypa1-security.com>
+Return-Path: <bounce@paypa1-security.com>
+MIME-Version: 1.0
+Content-Type: multipart/alternative; boundary="----=_Part_12345"
+X-Spam-Score: 8.5
+X-Spam-Flag: YES
+X-Mailer: PHPMailer 5.2.23
+
+------=_Part_12345
+Content-Type: text/plain; charset="UTF-8"
+
+URGENT: Your PayPal account has been compromised!
+
+We have detected suspicious activity on your account. You must verify your identity within 24 hours or your account will be permanently suspended.
+
+Click here to verify: https://paypa1-security.com/verify?id=abc123
+
+If you do not verify within 24 hours, your account will be closed and all funds will be frozen.
+
+PayPal Security Team
+------=_Part_12345
+Content-Type: text/html; charset="UTF-8"
+
+<html>
+<body>
+<p><b>URGENT: Your PayPal account has been compromised!</b></p>
+<p>We have detected suspicious activity on your account. You must verify your identity within 24 hours or your account will be permanently suspended.</p>
+<p><a href="https://paypa1-security.com/verify?id=abc123">https://www.paypal.com/verify</a></p>
+<p>If you do not verify within 24 hours, your account will be closed and all funds will be frozen.</p>
+<img src="https://track.paypa1-security.com/pixel.gif" width="1" height="1" />
+<p>PayPal Security Team</p>
+</body>
+</html>
+------=_Part_12345--
