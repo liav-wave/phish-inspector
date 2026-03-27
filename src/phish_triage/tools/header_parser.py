@@ -44,13 +44,16 @@ def _parse_received_hops(msg: email.message.Message) -> list[dict]:
         if from_match:
             hop["from"] = from_match.group(1)
 
-        # Extract "by" server
-        by_match = re.search(r'by\s+([\w.-]+)', str(header), re.IGNORECASE)
+        # Extract "by" server — handle IPv6 (2002:a05:...) and FQDNs
+        by_match = re.search(r'by\s+([\w.:%-]+)', str(header), re.IGNORECASE)
         if by_match:
             hop["by"] = by_match.group(1)
 
-        # Extract IP
+        # Extract IP — check bracketed [ip] first, then parenthesized (ip) or bare ip
         ip_match = re.search(r'\[(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})\]', str(header))
+        if not ip_match:
+            # Match IP in parentheses like (efianalytics.com. 216.244.76.116)
+            ip_match = re.search(r'[(\s](\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})[)\s]', str(header))
         if ip_match:
             hop["ip"] = ip_match.group(1)
 

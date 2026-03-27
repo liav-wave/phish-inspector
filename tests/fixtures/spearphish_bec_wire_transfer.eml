@@ -1,0 +1,75 @@
+Delivered-To: accounts@bandersnatch.llc
+Received: by 2002:a05:7300:4185:b0:11a:c3f2:8e01 with SMTP id qu5csp3847291dyb;
+        Mon, 24 Mar 2026 07:22:14 -0700 (PDT)
+X-Received: by 2002:a05:6a00:2d12:b0:71c:a44e:9f03 with SMTP id d2e1a72fcca58-7328b1f4e92mr8815296b3a.12.1774566134502;
+        Mon, 24 Mar 2026 07:22:14 -0700 (PDT)
+ARC-Authentication-Results: i=1; mx.google.com;
+       spf=pass (google.com: domain of m.hutchins@bandersnatch-invoicing.com designates 185.56.89.12 as permitted sender) smtp.mailfrom=m.hutchins@bandersnatch-invoicing.com;
+       dkim=none;
+       dmarc=fail (p=NONE sp=NONE dis=NONE) header.from=bandersnatch.llc
+Return-Path: <m.hutchins@bandersnatch-invoicing.com>
+Received: from outbound3.cheapmailer.net (outbound3.cheapmailer.net. [185.56.89.12])
+        by mx.google.com with ESMTPS id a2e1a72fcca58-7328b1a3219si1938412b3a.401.2026.03.24.07.22.13
+        for <accounts@bandersnatch.llc>
+        (version=TLS1_2 cipher=ECDHE-ECDSA-AES128-GCM-SHA256 bits=128/128);
+        Mon, 24 Mar 2026 07:22:14 -0700 (PDT)
+Received-SPF: pass (google.com: domain of m.hutchins@bandersnatch-invoicing.com designates 185.56.89.12 as permitted sender) client-ip=185.56.89.12;
+Authentication-Results: mx.google.com;
+       spf=pass (google.com: domain of m.hutchins@bandersnatch-invoicing.com designates 185.56.89.12 as permitted sender) smtp.mailfrom=m.hutchins@bandersnatch-invoicing.com;
+       dkim=none;
+       dmarc=fail (p=NONE sp=NONE dis=NONE) header.from=bandersnatch.llc
+Received: from localhost (vps-node41.hostzone.ru [91.215.170.44])
+        by outbound3.cheapmailer.net (Postfix) with ESMTP id 7A3F2C1D04
+        for <accounts@bandersnatch.llc>;
+        Mon, 24 Mar 2026 14:22:11 +0000 (UTC)
+MIME-Version: 1.0
+From: "Margaret Hutchins - CFO" <m.hutchins@bandersnatch.llc>
+To: accounts@bandersnatch.llc
+Reply-To: m.hutchins.cfo@proton.me
+Date: Mon, 24 Mar 2026 14:22:10 +0000
+Subject: Urgent: Updated wire instructions for Cheshire Research invoice
+Message-ID: <8a3f91cc-47e2-4b18-a6c0-ee14d7203fa1@bandersnatch.llc>
+Content-Type: multipart/mixed; boundary="----=_Part_7721_1053284718.1774566130"
+
+------=_Part_7721_1053284718.1774566130
+Content-Type: text/html; charset="UTF-8"
+Content-Transfer-Encoding: quoted-printable
+
+<html>
+<body style=3D"font-family: Calibri, sans-serif; font-size: 11pt;">
+<p>Hi team,</p>
+
+<p>Cheshire Research just contacted me directly =E2=80=94 they=E2=80=99ve s=
+witched banks and need us to update the wire details for invoice <b>CR-2026-=
+0892</b> ($143,200). I=E2=80=99ve attached the updated payment instructions=
+ they sent over.</p>
+
+<p>This is overdue and I promised we=E2=80=99d get it out today. Can someon=
+e process this before 3pm ET? I=E2=80=99m in back-to-back meetings until th=
+en and won=E2=80=99t be checking email.</p>
+
+<p>If there are any issues, text me at 917-555-0148 (don=E2=80=99t call, I=
+=E2=80=99m in meetings).</p>
+
+<p>Thanks,<br>
+Margaret Hutchins<br>
+Chief Financial Officer<br>
+Bandersnatch LLC<br>
+<span style=3D"color:#999;">Sent from my iPhone</span></p>
+</body>
+</html>
+
+------=_Part_7721_1053284718.1774566130
+Content-Type: application/pdf; name="Cheshire_Research_Wire_Instructions_Updated.pdf"
+Content-Disposition: attachment; filename="Cheshire_Research_Wire_Instructions_Updated.pdf"
+Content-Transfer-Encoding: base64
+
+JVBERi0xLjQKMSAwIG9iago8PCAvVHlwZSAvQ2F0YWxvZyAvUGFnZXMgMiAwIFIgPj4KZW5k
+b2JqCjIgMCBvYmoKPDwgL1R5cGUgL1BhZ2VzIC9LaWRzIFszIDAgUl0gL0NvdW50IDEgPj4K
+ZW5kb2JqCjMgMCBvYmoKPDwgL1R5cGUgL1BhZ2UgL1BhcmVudCAyIDAgUiAvTWVkaWFCb3gg
+WzAgMCA2MTIgNzkyXSA+PgplbmRvYmoKeHJlZgowIDQKMDAwMDAwMDAwMCA2NTUzNSBmIAow
+MDAwMDAwMDA5IDAwMDAwIG4gCjAwMDAwMDAwNTggMDAwMDAgbiAKMDAwMDAwMDExNSAwMDAw
+MCBuIAp0cmFpbGVyCjw8IC9TaXplIDQgL1Jvb3QgMSAwIFIgPj4Kc3RhcnR4cmVmCjIwNAol
+JUVPRA==
+
+------=_Part_7721_1053284718.1774566130--

@@ -12,6 +12,40 @@ IP_RE = re.compile(r'\b(?:\d{1,3}\.){3}\d{1,3}\b')
 DOMAIN_RE = re.compile(r'\b(?:[a-zA-Z0-9-]+\.)+[a-zA-Z]{2,}\b')
 
 
+def _is_valid_ip(ip: str, context: str = "") -> bool:
+    """Filter out false-positive IPs (date fragments, etc.).
+
+    Uses octet range validation plus contextual checks. Date-like fragments
+    (e.g., 03.12.05.15 from timestamps) are rejected by checking whether the
+    IP appears inside a Received header timestamp region or other date context.
+    """
+    octets = ip.split(".")
+    if len(octets) != 4:
+        return False
+    vals = []
+    for octet in octets:
+        val = int(octet)
+        if val > 255:
+            return False
+        vals.append(val)
+    # First octet 0 is not routable
+    if vals[0] == 0:
+        return False
+    # Check if this "IP" is actually embedded in a date/time string
+    # Common pattern: "03.12.05.15" from "2026.03.12.05.15.36" or similar timestamp fragments
+    # Heuristic: if the IP appears directly adjacent to date-like context, reject it
+    if context:
+        # Find position of IP in context and check surrounding chars
+        idx = context.find(ip)
+        if idx >= 0:
+            # Check if preceded or followed by more digits/dots (part of a longer number sequence)
+            before = context[max(0, idx - 3):idx]
+            after = context[idx + len(ip):idx + len(ip) + 3]
+            if re.search(r'\d[.\-/]$', before) or re.search(r'^[.\-/]\d', after):
+                return False
+    return True
+
+
 class _LinkExtractor(HTMLParser):
     """Extract href/display-text pairs from HTML."""
 
@@ -117,7 +151,7 @@ def parse_email_structure(raw_email: str) -> dict:
 
     # Extract from headers
     header_text = "\n".join(f"{k}: {v}" for k, v in msg.items())
-    header_ips = IP_RE.findall(header_text)
+    header_ips = [ip for ip in IP_RE.findall(header_text) if _is_valid_ip(ip, header_text)]
 
     # Walk MIME parts
     attachments = []
@@ -177,7 +211,7 @@ def parse_email_structure(raw_email: str) -> dict:
 
     # Body IPs
     body_text = "\n".join(text_parts + html_parts)
-    body_ips = IP_RE.findall(body_text)
+    body_ips = [ip for ip in IP_RE.findall(body_text) if _is_valid_ip(ip, body_text)]
 
     # URL mismatches
     url_mismatches = find_url_mismatches(html_links)

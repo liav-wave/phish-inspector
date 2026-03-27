@@ -1,0 +1,99 @@
+Delivered-To: procurement@jabberwocky-corp.com
+Received: by 2002:a05:7412:d2a3:b0:1bb:a091:7e22 with SMTP id zz35csp2749381dyb;
+        Thu, 27 Mar 2026 11:03:22 -0700 (PDT)
+X-Received: by 2002:a05:6870:c1a7:b0:41c:e382:5d01 with SMTP id 586e51a60fabf-41ce382aa91mr1284721fac.30.1774738602871;
+        Thu, 27 Mar 2026 11:03:22 -0700 (PDT)
+ARC-Authentication-Results: i=1; mx.google.com;
+       dkim=pass header.i=@redqueenracing-billing.com header.s=selector1 header.b=Lm4nPq2R;
+       spf=pass (google.com: domain of ap-invoices@redqueenracing-billing.com designates 162.243.77.184 as permitted sender) smtp.mailfrom=ap-invoices@redqueenracing-billing.com;
+       dmarc=fail (p=NONE sp=NONE dis=NONE) header.from=redqueenracing.com
+Return-Path: <ap-invoices@redqueenracing-billing.com>
+Received: from mail-gw.redqueenracing-billing.com (vps-do-nyc3-node12.digitalnodes.net. [162.243.77.184])
+        by mx.google.com with ESMTPS id 586e51a60fabf-41ce0a24c7dsi2188403fac.218.2026.03.27.11.03.21
+        for <procurement@jabberwocky-corp.com>
+        (version=TLS1_3 cipher=TLS_AES_256_GCM_SHA384 bits=256/256);
+        Thu, 27 Mar 2026 11:03:22 -0700 (PDT)
+Received-SPF: pass (google.com: domain of ap-invoices@redqueenracing-billing.com designates 162.243.77.184 as permitted sender) client-ip=162.243.77.184;
+Authentication-Results: mx.google.com;
+       dkim=pass header.i=@redqueenracing-billing.com header.s=selector1 header.b=Lm4nPq2R;
+       spf=pass (google.com: domain of ap-invoices@redqueenracing-billing.com designates 162.243.77.184 as permitted sender) smtp.mailfrom=ap-invoices@redqueenracing-billing.com;
+       dmarc=fail (p=NONE sp=NONE dis=NONE) header.from=redqueenracing.com
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=redqueenracing-billing.com;
+        s=selector1; t=1774738601;
+        h=from:to:cc:subject:date:message-id:content-type;
+        bh=Wm5Eg2HmKp3s8uYdi0bT7D2xJrIkNml47oDcIgN1Y50=;
+        b=Lm4nPq2RsT5uVwXy8zA1bC3dEfG4hIjK5lMnO6pQrS7tUvW8xYzA9bCdEfGhIj
+         K1lMnO2pQrS3tUvW4xYzA5bCdE6fGhI7jKlM8nOpQ9rStU0vWxY1zA2bC3dEfG4h==
+Received: from internal-app-01.redqueenracing-billing.com (unknown [10.132.0.4])
+        by mail-gw.redqueenracing-billing.com (Postfix) with ESMTP id 9C4E2B1037
+        for <procurement@jabberwocky-corp.com>;
+        Thu, 27 Mar 2026 18:03:19 +0000 (UTC)
+X-Originating-IP: 162.243.77.184
+MIME-Version: 1.0
+From: "RedQueenRacing Inc - Accounts Receivable" <ap-invoices@redqueenracing.com>
+To: procurement@jabberwocky-corp.com
+Cc: s.chen@jabberwocky-corp.com
+Date: Thu, 27 Mar 2026 18:03:18 +0000
+Subject: RE: Outstanding Invoice RQR-2026-1847 - Updated Payment Portal
+References: <original-thread-id-8a7f3c@jabberwocky-corp.com>
+In-Reply-To: <original-thread-id-8a7f3c@jabberwocky-corp.com>
+X-Mailer: Microsoft Outlook 16.0
+Message-ID: <d4e5f6a7-b8c9-0d1e-2f3a-4b5c6d7e8f90@redqueenracing.com>
+Content-Type: multipart/mixed; boundary="----=_NextPart_001_0A1B_01DAF2C3.4E5F6A78"
+
+------=_NextPart_001_0A1B_01DAF2C3.4E5F6A78
+Content-Type: text/html; charset="UTF-8"
+Content-Transfer-Encoding: quoted-printable
+
+<html>
+<body style=3D"font-family: Calibri, sans-serif; font-size: 11pt;">
+<p>Hi Procurement team,</p>
+
+<p>Following up on our earlier thread =E2=80=94 I wanted to let you know th=
+at we=E2=80=99ve migrated to a new billing platform as of this month. Going=
+ forward, all invoice payments should be submitted through our updated porta=
+l.</p>
+
+<p>Your outstanding balance for Q1 services is <b>$67,450.00</b> (Invoice <=
+b>RQR-2026-1847</b>, attached). Payment was due March 15 =E2=80=94 we=E2=
+=80=99d appreciate it if you could process this at your earliest convenien=
+ce.</p>
+
+<p>=F0=9F=94=97 <b>New payment portal:</b> <a href=3D"https://billing-redq=
+ueenracing.com/pay?inv=3DRQR-2026-1847&amp;amt=3D67450&amp;client=3Djabber=
+wocky">https://payments.redqueenracing.com/invoices/RQR-2026-1847</a></p>
+
+<p>Please use the portal link above rather than our old payment details =E2=
+=80=94 the previous bank account has been closed.</p>
+
+<p>Let me know if you have any questions. Happy to jump on a call if needed=
+.</p>
+
+<p>Best regards,<br>
+<b>Patricia Moreno</b><br>
+Accounts Receivable Manager<br>
+RedQueenRacing Inc<br>
+Direct: (512) 555-0173<br>
+<a href=3D"https://www.redqueenracing.com">www.redqueenracing.com</a></p>
+
+<p style=3D"font-size: 9pt; color: #999;">CONFIDENTIALITY NOTICE: This ema=
+il and any attachments are for the exclusive and confidential use of the int=
+ended recipient. If you are not the intended recipient, please do not read, =
+distribute, or take action based on this message.</p>
+</body>
+</html>
+
+------=_NextPart_001_0A1B_01DAF2C3.4E5F6A78
+Content-Type: application/pdf; name="Invoice_RQR-2026-1847_RedQueenRacing.pdf"
+Content-Disposition: attachment; filename="Invoice_RQR-2026-1847_RedQueenRacing.pdf"
+Content-Transfer-Encoding: base64
+
+JVBERi0xLjQKMSAwIG9iago8PCAvVHlwZSAvQ2F0YWxvZyAvUGFnZXMgMiAwIFIgPj4KZW5k
+b2JqCjIgMCBvYmoKPDwgL1R5cGUgL1BhZ2VzIC9LaWRzIFszIDAgUl0gL0NvdW50IDEgPj4K
+ZW5kb2JqCjMgMCBvYmoKPDwgL1R5cGUgL1BhZ2UgL1BhcmVudCAyIDAgUiAvTWVkaWFCb3gg
+WzAgMCA2MTIgNzkyXSA+PgplbmRvYmoKeHJlZgowIDQKMDAwMDAwMDAwMCA2NTUzNSBmIAow
+MDAwMDAwMDA5IDAwMDAwIG4gCjAwMDAwMDAwNTggMDAwMDAgbiAKMDAwMDAwMDExNSAwMDAw
+MCBuIAp0cmFpbGVyCjw8IC9TaXplIDQgL1Jvb3QgMSAwIFIgPj4Kc3RhcnR4cmVmCjIwNAol
+JUVPRA==
+
+------=_NextPart_001_0A1B_01DAF2C3.4E5F6A78--
