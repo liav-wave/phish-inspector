@@ -19,6 +19,8 @@ load_dotenv()
 mcp = FastMCP(
     "Phishing Triage",
     instructions="Email phishing analysis and enrichment tools. Call these tools to gather technical intelligence about suspicious emails.",
+    host="0.0.0.0",
+    port=int(os.environ.get("PORT", 8080)),
 )
 
 
@@ -121,6 +123,6 @@ _check_api_keys()
 if __name__ == "__main__":
     transport = sys.argv[1] if len(sys.argv) > 1 else "stdio"
     if transport == "http":
-        mcp.run(transport="streamable-http", host="0.0.0.0", port=8000)
+        mcp.run(transport="streamable-http")
     else:
         mcp.run()

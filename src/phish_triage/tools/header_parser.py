@@ -5,6 +5,8 @@ import email.policy
 import re
 from datetime import datetime
 
+from phish_triage.utils.errors import sanitize_error
+
 
 def _parse_authentication_results(header_value: str) -> dict:
     """Parse Authentication-Results header into structured SPF/DKIM/DMARC verdicts."""
@@ -150,4 +152,4 @@ async def parse_email_headers(raw_headers: str) -> dict:
             "x_headers": x_headers,
         }
     except Exception as e:
-        return {"error": "Header parsing failed", "detail": str(e)}
+        return {"error": "Header parsing failed", "detail": sanitize_error(e)}

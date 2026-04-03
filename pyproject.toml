@@ -8,6 +8,7 @@ dependencies = [
     "httpx==0.28.1",
     "python-dotenv==1.0.1",
     "python-dateutil==2.9.0.post0",
+    "python-whois==0.9.6",
 ]
 
 [project.optional-dependencies]

@@ -1,0 +1,27 @@
+apiVersion: serving.knative.dev/v1
+kind: Service
+metadata:
+  name: phish-triage
+spec:
+  template:
+    metadata:
+      annotations:
+        autoscaling.knative.dev/minScale: "0"
+        autoscaling.knative.dev/maxScale: "2"
+    spec:
+      containerConcurrency: 10
+      timeoutSeconds: 300
+      containers:
+        - image: IMAGE_URL  # replaced by deploy.sh
+          ports:
+            - containerPort: 8080
+          resources:
+            limits:
+              memory: 512Mi
+              cpu: "1"
+          # API keys are injected via Secret Manager (see deploy.sh --set-secrets).
+          # Do NOT put key values here — use:
+          #   gcloud secrets create urlscan-api-key --data-file=-
+          #   gcloud secrets create virustotal-api-key --data-file=-
+          #   gcloud secrets create google-safe-browsing-api-key --data-file=-
+          #   gcloud secrets create abuseipdb-api-key --data-file=-

@@ -11,15 +11,18 @@ WORKDIR /home/appuser/app
 # Copy dependency files first (layer caching)
 COPY pyproject.toml uv.lock ./
 
-# Install dependencies with locked versions
-RUN uv sync --frozen
+# Export locked deps and install into system Python (no venv writes at runtime)
+RUN uv export --frozen --no-hashes --no-dev > requirements.txt && \
+    uv pip install --system -r requirements.txt
 
-# Copy application code
+# Copy and install the project itself
 COPY src/ ./src/
-COPY tests/ ./tests/
+RUN uv pip install --system --no-deps .
 
 # Switch to non-root user
 USER appuser
 
-# Default: run MCP server in stdio mode
-CMD ["uv", "run", "python", "-m", "phish_triage.server"]
+EXPOSE 8080
+
+# Run MCP server in HTTP mode (Cloud Run injects PORT env var)
+CMD ["python", "-m", "phish_triage", "http"]

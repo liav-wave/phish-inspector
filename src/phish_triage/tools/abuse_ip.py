@@ -1,11 +1,12 @@
 """AbuseIPDB IP reputation checking."""
 
 import os
-import re
 
 import httpx
 
+from phish_triage.utils.errors import sanitize_error
 from phish_triage.utils.rate_limiter import abuseipdb_limiter
+from phish_triage.utils.validators import validate_ip
 
 
 TIMEOUT = 15.0
@@ -28,13 +29,10 @@ async def check_abuse_ip(ip_address: str, max_age_in_days: int = 90) -> dict:
             "detail": "ABUSEIPDB_API_KEY environment variable is not set. Get a free API key from abuseipdb.com.",
         }
 
-    # Validate IP
-    if not re.match(r'^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$', ip_address):
-        return {"error": "invalid_input", "detail": "Invalid IP address format", "ip_address": ip_address}
-
-    # Reject private IPs
-    if re.match(r'^(127\.|10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.)', ip_address):
-        return {"error": "invalid_input", "detail": "Refusing to check private/loopback IP", "ip_address": ip_address}
+    # Validate IP (handles hex, decimal, IPv4-mapped IPv6, shorthand notation)
+    ip_error = validate_ip(ip_address)
+    if ip_error:
+        return {"error": "invalid_input", "detail": ip_error, "ip_address": ip_address}
 
     if not await abuseipdb_limiter.acquire():
         wait = abuseipdb_limiter.wait_time()
@@ -74,4 +72,4 @@ async def check_abuse_ip(ip_address: str, max_age_in_days: int = 90) -> dict:
     except httpx.TimeoutException:
         return {"error": "timeout", "detail": "AbuseIPDB request timed out.", "ip_address": ip_address}
     except Exception as e:
-        return {"error": "abuseipdb_error", "detail": str(e), "ip_address": ip_address}
+        return {"error": "abuseipdb_error", "detail": sanitize_error(e), "ip_address": ip_address}

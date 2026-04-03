@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "phish-triage": {
+      "command": "/opt/homebrew/bin/uv",
+      "args": ["run", "--directory", "/Users/liav/projects/phishing-audit", "python", "-m", "phish_triage"],
+      "env": {
+        "DOTENV_PATH": "/Users/liav/projects/phishing-audit/.env"
+      }
+    }
+  }
+}

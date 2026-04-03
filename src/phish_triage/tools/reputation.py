@@ -6,7 +6,9 @@ import re
 
 import httpx
 
+from phish_triage.utils.errors import sanitize_error
 from phish_triage.utils.rate_limiter import virustotal_limiter, safe_browsing_limiter
+from phish_triage.utils.validators import validate_ip, validate_url
 
 
 TIMEOUT = 15.0
@@ -15,17 +17,12 @@ TIMEOUT = 15.0
 def _validate_indicator(indicator: str, indicator_type: str) -> str | None:
     """Validate indicator format. Returns error message or None."""
     if indicator_type == "ip":
-        if not re.match(r'^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$', indicator):
-            return "Invalid IP address format"
-        # Reject private IPs
-        if re.match(r'^(127\.|10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.)', indicator):
-            return "Refusing to check private/loopback IP"
+        return validate_ip(indicator)
     elif indicator_type == "domain":
         if not re.match(r'^[a-zA-Z0-9][a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$', indicator):
             return "Invalid domain format"
     elif indicator_type == "url":
-        if not indicator.startswith(("http://", "https://")):
-            return "URL must start with http:// or https://"
+        return validate_url(indicator)
     else:
         return f"Unknown indicator_type: {indicator_type}. Use 'url', 'domain', or 'ip'."
     return None
@@ -80,7 +77,7 @@ async def _check_virustotal(indicator: str, indicator_type: str, api_key: str) -
     except httpx.TimeoutException:
         return {"error": "timeout", "detail": "VirusTotal request timed out."}
     except Exception as e:
-        return {"error": "virustotal_error", "detail": str(e)}
+        return {"error": "virustotal_error", "detail": sanitize_error(e)}
 
 
 async def _check_safe_browsing(indicator: str, api_key: str) -> dict:
@@ -100,8 +97,9 @@ async def _check_safe_browsing(indicator: str, api_key: str) -> dict:
                 },
             }
             resp = await client.post(
-                f"https://safebrowsing.googleapis.com/v4/threatMatches:find?key={api_key}",
+                "https://safebrowsing.googleapis.com/v4/threatMatches:find",
                 json=body,
+                headers={"x-goog-api-key": api_key, "Content-Type": "application/json"},
             )
 
             if resp.status_code != 200:
@@ -117,7 +115,7 @@ async def _check_safe_browsing(indicator: str, api_key: str) -> dict:
     except httpx.TimeoutException:
         return {"error": "timeout", "detail": "Google Safe Browsing request timed out."}
     except Exception as e:
-        return {"error": "safe_browsing_error", "detail": str(e)}
+        return {"error": "safe_browsing_error", "detail": sanitize_error(e)}
 
 
 async def check_reputation(indicator: str, indicator_type: str) -> dict:

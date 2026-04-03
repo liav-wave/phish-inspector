@@ -2,34 +2,16 @@
 
 import asyncio
 import os
-import re
 
 import httpx
 
+from phish_triage.utils.errors import sanitize_error
 from phish_triage.utils.rate_limiter import urlscan_limiter
+from phish_triage.utils.validators import validate_url
 
 
 API_BASE = "https://urlscan.io/api/v1"
 TIMEOUT = 15.0
-
-
-def _validate_url(url: str) -> str | None:
-    """Basic URL validation. Returns error message or None if valid."""
-    if not url.startswith(("http://", "https://")):
-        return "URL must start with http:// or https://"
-    # Reject private/loopback IPs
-    private_patterns = [
-        r'https?://127\.',
-        r'https?://10\.',
-        r'https?://192\.168\.',
-        r'https?://172\.(1[6-9]|2\d|3[01])\.',
-        r'https?://localhost',
-        r'https?://\[::1\]',
-    ]
-    for pattern in private_patterns:
-        if re.match(pattern, url, re.IGNORECASE):
-            return "Refusing to scan private/loopback address"
-    return None
 
 
 async def scan_url(url: str, visibility: str = "unlisted") -> dict:
@@ -49,7 +31,7 @@ async def scan_url(url: str, visibility: str = "unlisted") -> dict:
             "detail": "URLSCAN_API_KEY environment variable is not set. Get a free API key from urlscan.io.",
         }
 
-    validation_error = _validate_url(url)
+    validation_error = validate_url(url)
     if validation_error:
         return {"error": "invalid_input", "detail": validation_error, "url": url}
 
@@ -118,4 +100,4 @@ async def scan_url(url: str, visibility: str = "unlisted") -> dict:
     except httpx.TimeoutException:
         return {"error": "timeout", "detail": "HTTP request to URLScan.io timed out.", "url": url}
     except Exception as e:
-        return {"error": "scan_failed", "detail": str(e), "url": url}
+        return {"error": "scan_failed", "detail": sanitize_error(e), "url": url}

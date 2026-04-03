@@ -42,3 +42,43 @@ uv run pytest                         # full suite
 uv run pytest tests/test_dns.py       # single module
 uv run pytest -x                      # stop on first failure
 ```
+
+## Deployment (Cloud Run)
+
+Prerequisites: `gcloud` CLI authenticated, a GCP project with Cloud Run and Secret Manager enabled.
+
+```bash
+export GCP_PROJECT_ID=your-project-id
+
+# One-time: create secrets in Secret Manager (paste each key when prompted)
+echo -n "YOUR_KEY" | gcloud secrets create urlscan-api-key --data-file=-
+echo -n "YOUR_KEY" | gcloud secrets create virustotal-api-key --data-file=-
+echo -n "YOUR_KEY" | gcloud secrets create google-safe-browsing-api-key --data-file=-
+echo -n "YOUR_KEY" | gcloud secrets create abuseipdb-api-key --data-file=-
+
+# Deploy (uses --set-secrets to inject keys from Secret Manager)
+./scripts/deploy.sh
+
+# Grant a user access
+gcloud run services add-iam-policy-binding phish-triage \
+  --region=us-central1 \
+  --member='user:someone@yourco.com' \
+  --role='roles/run.invoker'
+```
+
+Staff connect via Claude Desktop/Code MCP config:
+```json
+{
+  "mcpServers": {
+    "phish-triage": {
+      "type": "streamable-http",
+      "url": "https://phish-triage-HASH-uc.a.run.app/mcp",
+      "headers": {
+        "Authorization": "Bearer $(gcloud auth print-identity-token)"
+      }
+    }
+  }
+}
+```
+
+Local Docker test: `docker build -t phish-triage . && docker run -p 8080:8080 phish-triage`

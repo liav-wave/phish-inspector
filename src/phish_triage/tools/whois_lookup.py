@@ -1,8 +1,10 @@
-"""WHOIS domain registration lookup using vendored python-whois."""
+"""WHOIS domain registration lookup using python-whois."""
 
+import asyncio
 from datetime import datetime, timezone
 
-from phish_triage.vendor.python_whois import whois
+from phish_triage.utils.errors import sanitize_error
+from whois import whois
 
 
 def _to_datetime(val) -> datetime | None:
@@ -41,7 +43,7 @@ async def whois_lookup(domain: str) -> dict:
         Structured WHOIS data including registrar, dates, age, and privacy status.
     """
     try:
-        w = whois(domain)
+        w = await asyncio.wait_for(asyncio.to_thread(whois, domain), timeout=15.0)
 
         creation_date = _to_datetime(w.creation_date)
         expiration_date = _to_datetime(w.expiration_date)
@@ -70,5 +72,7 @@ async def whois_lookup(domain: str) -> dict:
             "privacy_protected": privacy_protected,
             "name_servers": sorted(set(name_servers)),
         }
+    except asyncio.TimeoutError:
+        return {"error": "timeout", "detail": "WHOIS lookup timed out after 15s.", "domain": domain}
     except Exception as e:
-        return {"error": "WHOIS lookup failed", "detail": str(e), "domain": domain}
+        return {"error": "WHOIS lookup failed", "detail": sanitize_error(e), "domain": domain}
