@@ -1,0 +1,14 @@
+{
+  "mcpServers": {
+    "phish-triage": {
+      "command": "uv",
+      "args": ["run", "--directory", "/CHANGE_ME/phishing-audit", "python", "-m", "phish_triage"],
+      "env": {
+        "URLSCAN_API_KEY": "YOUR_KEY_HERE",
+        "GOOGLE_SAFE_BROWSING_API_KEY": "YOUR_KEY_HERE",
+        "ABUSEIPDB_API_KEY": "YOUR_KEY_HERE",
+        "VIRUSTOTAL_API_KEY": "YOUR_KEY_HERE"
+      }
+    }
+  }
+}
