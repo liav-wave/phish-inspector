@@ -119,6 +119,32 @@ Present findings as a structured report:
 - [What the recipient should do]
 ```
 
+## Privacy & Third-Party Disclosure
+
+**Before running the analysis pipeline**, inform the user that this process will send extracted indicators to external services. Use language like:
+
+> To analyze this email, I'll extract indicators (URLs, domains, IPs) and check them against several external services: URLScan.io, VirusTotal, Google Safe Browsing, AbuseIPDB, and public WHOIS/DNS servers. No raw email content is sent — only the extracted URLs, domains, and IP addresses. Shall I proceed?
+
+If the user asks for details about what is shared with whom, provide specifics:
+
+| Service | What is sent | Notes |
+|---|---|---|
+| URLScan.io | URLs from the email | Submitted as "unlisted" scans (not publicly searchable, but accessible via scan UUID) |
+| VirusTotal | URLs, domains, or IPs | May be visible to other VirusTotal users |
+| Google Safe Browsing | URLs/domains | Queried against Google's threat database |
+| AbuseIPDB | IP addresses | Checked against crowd-sourced abuse reports |
+| Public WHOIS | Domain names | Standard WHOIS protocol queries |
+| Public DNS | Domain names | Standard DNS record lookups |
+
+**If a phishing URL contains a unique tracking token**, the attacker may observe the scan in their server logs and realize the email is being triaged. Note this risk to the user if relevant (e.g., if URLs contain long random tokens or per-recipient identifiers).
+
+## Email Content Handling Rules
+
+- **Never log, save, or reproduce raw email content** in your responses beyond what is needed for the analysis report. Do not echo back the full email body or headers unless the user specifically requests a specific section.
+- **Never include email content in code suggestions, commit messages, or file writes.** If the user asks you to save analysis results, save only the structured report — not the original email.
+- **Treat all email content as confidential client data.** This tool is used by Wavefront Security's nonprofit clients. Email content must not be shared, forwarded, or persisted beyond the current conversation.
+- **Attachment contents are off-limits.** Report filenames, content types, and sizes. Never attempt to decode, render, or extract content from attachments.
+
 ## Important Notes
 
 - **Never visit or click** URLs extracted from suspicious emails. Use `tool_scan_url` instead.

@@ -12,7 +12,9 @@ from phish_triage.tools.whois_lookup import whois_lookup
 from phish_triage.tools.url_scanner import scan_url
 from phish_triage.tools.reputation import check_reputation
 from phish_triage.tools.abuse_ip import check_abuse_ip
+from phish_triage.tools.redirect_follower import follow_redirects
 from phish_triage.utils.email_parser import parse_email_structure
+from phish_triage.utils.errors import sanitize_tool
 
 load_dotenv()
 
@@ -25,6 +27,7 @@ mcp = FastMCP(
 
 
 @mcp.tool()
+@sanitize_tool
 async def tool_parse_email_headers(raw_headers: str) -> dict:
     """Parse raw email headers into structured data for phishing analysis.
 
@@ -37,6 +40,7 @@ async def tool_parse_email_headers(raw_headers: str) -> dict:
 
 
 @mcp.tool()
+@sanitize_tool
 async def tool_dns_lookup(domain: str, record_types: list[str] | None = None, dkim_selector: str | None = None) -> dict:
     """Query DNS records to check a domain's mail authentication and legitimacy.
 
@@ -48,6 +52,7 @@ async def tool_dns_lookup(domain: str, record_types: list[str] | None = None, dk
 
 
 @mcp.tool()
+@sanitize_tool
 async def tool_whois_lookup(domain: str) -> dict:
     """Get WHOIS registration data for a domain to assess age and legitimacy.
 
@@ -59,6 +64,7 @@ async def tool_whois_lookup(domain: str) -> dict:
 
 
 @mcp.tool()
+@sanitize_tool
 async def tool_scan_url(url: str, visibility: str = "unlisted") -> dict:
     """Submit a URL to URLScan.io for full page analysis.
 
@@ -70,6 +76,7 @@ async def tool_scan_url(url: str, visibility: str = "unlisted") -> dict:
 
 
 @mcp.tool()
+@sanitize_tool
 async def tool_check_reputation(indicator: str, indicator_type: str) -> dict:
     """Check URL/domain/IP reputation via VirusTotal and Google Safe Browsing.
 
@@ -81,6 +88,7 @@ async def tool_check_reputation(indicator: str, indicator_type: str) -> dict:
 
 
 @mcp.tool()
+@sanitize_tool
 async def tool_check_abuse_ip(ip_address: str, max_age_in_days: int = 90) -> dict:
     """Check IP address reputation via AbuseIPDB.
 
@@ -92,6 +100,22 @@ async def tool_check_abuse_ip(ip_address: str, max_age_in_days: int = 90) -> dic
 
 
 @mcp.tool()
+@sanitize_tool
+async def tool_follow_redirects(url: str, max_redirects: int = 10) -> dict:
+    """Follow HTTP redirect chains locally without submitting to any third-party service.
+
+    Issues HEAD requests (falling back to GET when servers reject HEAD) and
+    records each hop. Use this for quick triage of where a link leads.
+    Does NOT render JavaScript, so JS-based redirects (meta refresh,
+    window.location) will not be followed. For full page rendering, use
+    scan_url (URLScan.io) instead — but note the third-party disclosure.
+    No API key required.
+    """
+    return await follow_redirects(url, max_redirects)
+
+
+@mcp.tool()
+@sanitize_tool
 async def tool_extract_email_indicators(raw_email: str) -> dict:
     """Extract all actionable indicators from a raw email for further analysis.
 
