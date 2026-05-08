@@ -1,6 +1,6 @@
 # Phish-Triage — Claude Desktop Skill Deploy Runbook
 
-**Form-factor:** project-local stdio MCP server, loaded by Claude Desktop's Code tab when the project directory is the working directory. Skill auto-loads from `.claude/skills/phish-triage.md`. API keys retrieved at runtime via 1Password CLI; never written to disk.
+**Form-factor:** project-local stdio MCP server, loaded by Claude Desktop's Code tab when the project directory is the working directory. Skill auto-loads from `.claude/skills/phish-triage/SKILL.md`. API keys retrieved at runtime via 1Password CLI; never written to disk.
 
 **This runbook uses GRIFFON / Paul as the worked example.** It supersedes the earlier `deploy-runbook.md`, which was scoped for a Cloud Run + IAP architecture we backed out of.
 
@@ -26,25 +26,23 @@ These all need to happen *before* the meeting. The meeting timeline assumes they
 
 ### 1. 1Password vault structure
 
-Decide on the vault hierarchy now so the secret references in `client.env.template` are stable:
+Each API key is its own item in the `Wavefront-Clients` vault, with a single `credential` field (1Password's default for API_Credential-category items):
 
 ```
-Wavefront-Clients/  (vault, per-client section)
-└─ GRIFFON/         (item or sub-vault)
-   └─ phish-triage  (item with three fields)
-      ├─ urlscan_api_key
-      ├─ abuseipdb_api_key
-      └─ google_safe_browsing_api_key
+Wavefront-Clients/  (vault)
+├─ GRIFFON_URLSCAN_API_KEY               (item, field: credential)
+├─ GRIFFON_ABUSEIPDB_API_KEY             (item, field: credential)
+└─ GRIFFON_GOOGLE_SAFE_BROWSING_API_KEY  (item, field: credential)
 ```
 
-Resulting `op://` references:
+Resulting `op://` references (committed in `client.env.template`):
 ```
-op://Wavefront-Clients/GRIFFON-phish-triage/urlscan_api_key
-op://Wavefront-Clients/GRIFFON-phish-triage/abuseipdb_api_key
-op://Wavefront-Clients/GRIFFON-phish-triage/google_safe_browsing_api_key
+op://Wavefront-Clients/GRIFFON_URLSCAN_API_KEY/credential
+op://Wavefront-Clients/GRIFFON_ABUSEIPDB_API_KEY/credential
+op://Wavefront-Clients/GRIFFON_GOOGLE_SAFE_BROWSING_API_KEY/credential
 ```
 
-(Adjust path components to whatever the actual vault names end up being. The strings appear in `client.env.template`, which is committed.)
+For SABLE/SAPLING/etc., the convention is `<CODENAME>_<KEY_NAME>` per item.
 
 ### 2. Provision API keys
 
@@ -226,7 +224,7 @@ Expected output: `setup: wrote /Users/paul/wavefront/phish-triage/.mcp.json` fol
 
 If Paul wants to review the script before running (recommended once, especially if his org has security review), `less scripts/setup.sh` — it's ~60 lines, no network calls, no privilege escalation, no package installs.
 
-The skill (`~/wavefront/phish-triage/.claude/skills/phish-triage.md`) is already in place from the tarball — nothing more to do.
+The skill (`~/wavefront/phish-triage/.claude/skills/phish-triage/SKILL.md`) is already in place from the tarball — nothing more to do.
 
 ### Phase 7 — Smoke test (~5 min)
 
@@ -276,7 +274,7 @@ CLT downloads in parallel with phases 2-4, so the wall-clock time is dominated b
 
 1. **Source delivery:** tarball. Paul has no git.
 2. **`.mcp.json` strategy:** per-user, gitignored. Generated from `.mcp.json.example` by `scripts/setup.sh` (committed).
-3. **Vault path naming:** `Wavefront-Clients/GRIFFON-phish-triage/{urlscan,abuseipdb,google_safe_browsing}_api_key`. Confirm matches actual 1Password vault before committing the template.
+3. **Vault path naming:** per-key items `GRIFFON_<KEY_NAME>` in vault `Wavefront-Clients`, field `credential`. Matches actual vault structure as confirmed during setup.
 4. **Repo tag:** `v0.1.0-griffon`.
 
 ## Open before the meeting

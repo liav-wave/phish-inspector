@@ -70,7 +70,7 @@ gcloud run services add-iam-policy-binding phish-triage \
 
 Send Paul:
 
-1. **The skill file** — current `.claude/skills/phish-triage.md` from the repo.
+1. **The skill** — current `.claude/skills/phish-triage/` directory (containing `SKILL.md`) from the repo.
 2. **The user guide** — `docs/phish-triage-guide.md`.
 3. **An MCP config snippet** with the deployed URL pre-filled. Use the example in the user guide as the template — replace `<URL provided by Wavefront>` with `<deployed-url>/mcp`.
 4. **A note on auth** — confirm Paul has `gcloud` installed and is signed in as the email you granted access to.
@@ -133,5 +133,5 @@ gcloud secrets delete abuseipdb-api-key
 
 Tell Paul to:
 
-- Remove `~/.claude/skills/phish-triage.md`
+- Remove `~/.claude/skills/phish-triage/` (directory)
 - Remove the `phish-triage` entry from `~/.claude/settings.json`

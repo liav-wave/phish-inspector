@@ -1,7 +1,7 @@
 {
   "mcpServers": {
     "phish-triage": {
-      "command": "__PROJECT_DIR__/scripts/launch-mcp.sh"
+      "command": "__PROJECT_DIR__/scripts/__LAUNCHER__"
     }
   }
 }

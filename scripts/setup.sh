@@ -36,10 +36,33 @@ if [[ -e "$TARGET" ]]; then
     exit 0
 fi
 
-# Substitute the placeholder. We use | as the sed delimiter to avoid clashing
-# with the / characters in absolute paths. macOS paths essentially never
-# contain |, so this is safe in practice.
-sed "s|__PROJECT_DIR__|$PROJECT_DIR|g" "$EXAMPLE" > "$TARGET"
+# Decide which launcher to wire into .mcp.json based on what's available.
+# Priority: if .env is present, use the env launcher (debug/first-deploy
+# path). Otherwise, if 1Password CLI is reachable, use the op launcher
+# (production path). If neither, fail with both remediation paths.
+if [[ -f "$PROJECT_DIR/.env" ]]; then
+    LAUNCHER="launch-mcp-env.sh"
+    LAUNCHER_REASON=".env present in project root"
+elif [[ -x "/usr/local/bin/op" ]] || command -v op >/dev/null 2>&1; then
+    LAUNCHER="launch-mcp.sh"
+    LAUNCHER_REASON="1Password CLI available"
+else
+    echo "setup: cannot pick a launcher. Neither path is available:" >&2
+    echo "  - $PROJECT_DIR/.env not present" >&2
+    echo "  - 1Password CLI (op) not found in /usr/local/bin or PATH" >&2
+    echo "" >&2
+    echo "Either:" >&2
+    echo "  cp .env.example .env  # then fill in the keys" >&2
+    echo "OR" >&2
+    echo "  enable 1Password CLI: 1Password app -> Settings -> Developer" >&2
+    exit 1
+fi
+
+# Substitute placeholders. We use | as the sed delimiter to avoid clashing
+# with / in absolute paths. macOS paths essentially never contain |.
+sed -e "s|__PROJECT_DIR__|$PROJECT_DIR|g" \
+    -e "s|__LAUNCHER__|$LAUNCHER|g" \
+    "$EXAMPLE" > "$TARGET"
 
 # Validate the result is parseable JSON. If not, remove and bail.
 if ! python3 -m json.tool "$TARGET" > /dev/null 2>&1; then
@@ -49,6 +72,7 @@ if ! python3 -m json.tool "$TARGET" > /dev/null 2>&1; then
 fi
 
 echo "setup: wrote $TARGET"
+echo "       launcher: $LAUNCHER  ($LAUNCHER_REASON)"
 echo
 
 # Helpful but non-fatal checks for runtime dependencies.
