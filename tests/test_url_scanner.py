@@ -83,8 +83,9 @@ async def test_successful_scan():
                     result = await scan_url("https://example.com")
 
     assert result["scan_id"] == "test-uuid-123"
-    assert result["page_domain"] == "example.com"
     assert result["is_malicious"] is False
+    assert result["untrusted_api_response"]["page_domain"] == "example.com"
+    assert result["untrusted_input"]["url"] == "https://example.com"
 
 
 async def test_api_429_handling():

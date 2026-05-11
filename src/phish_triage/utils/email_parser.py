@@ -192,42 +192,58 @@ def parse_email_structure(raw_email: str) -> dict:
                 if detect_tracking_pixels(payload):
                     has_tracking_pixels = True
 
-    # Deduplicate URLs
+    # Deduplicate URLs. Each URL is attacker-authored; clean before returning.
     seen = set()
     unique_urls = []
     for url in all_urls:
         if url not in seen:
             seen.add(url)
-            unique_urls.append(url)
+            unique_urls.append(clean_untrusted_string(url, max_len=2048))
 
     # Extract domains from URLs
     domains = set()
     for url in unique_urls:
         match = re.search(r'https?://([^/:]+)', url)
         if match:
-            domains.add(match.group(1).lower())
+            domains.add(clean_untrusted_string(match.group(1).lower(), max_len=255))
 
     # Sender domain
     from_addr = msg.get("From", "")
     sender_domain = ""
     email_match = re.search(r'[\w.+-]+@([\w.-]+)', from_addr)
     if email_match:
-        sender_domain = email_match.group(1).lower()
+        sender_domain = clean_untrusted_string(email_match.group(1).lower(), max_len=255)
 
-    # Body IPs
+    # Body IPs (IP literals — no untrusted-string content, just length safety
+    # via the IP regex itself).
     body_text = "\n".join(text_parts + html_parts)
     body_ips = [ip for ip in IP_RE.findall(body_text) if _is_valid_ip(ip, body_text)]
 
-    # URL mismatches
+    # URL mismatches — html_links are already cleaned in extract_links_from_html.
     url_mismatches = find_url_mismatches(html_links)
 
+    # Attachment filenames are a known injection vector (RTLO override for
+    # `.gpj.exe` → looks like `exe.jpg`). Clean and cap.
+    cleaned_attachments = [
+        {
+            "filename": clean_untrusted_string(a.get("filename") or "unknown", max_len=255),
+            "content_type": clean_untrusted_string(a.get("content_type") or "", max_len=100),
+        }
+        for a in attachments
+    ]
+
+    # See CLAUDE.md "Adversarial input" for the trust-tier wrapping contract.
+    # Trusted booleans we computed stay at top level; everything derived from
+    # email content goes inside `untrusted_input`.
     return {
-        "urls": unique_urls,
-        "url_mismatches": url_mismatches,
-        "domains": sorted(domains),
-        "sender_domain": sender_domain,
-        "ip_addresses": sorted(set(header_ips + body_ips)),
-        "attachments": attachments,
         "has_html": has_html,
         "has_tracking_pixels": has_tracking_pixels,
+        "untrusted_input": {
+            "urls": unique_urls,
+            "url_mismatches": url_mismatches,
+            "domains": sorted(domains),
+            "sender_domain": sender_domain,
+            "ip_addresses": sorted(set(header_ips + body_ips)),
+            "attachments": cleaned_attachments,
+        },
     }

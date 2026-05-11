@@ -65,14 +65,15 @@ async def tool_whois_lookup(domain: str) -> dict:
 
 @mcp.tool()
 @sanitize_tool
-async def tool_scan_url(url: str, visibility: str = "unlisted") -> dict:
+async def tool_scan_url(url: str) -> dict:
     """Submit a URL to URLScan.io for full page analysis.
 
     Returns the final destination after redirects, page title, contacted domains,
-    and maliciousness verdict. Visibility defaults to "unlisted" for client privacy.
+    and maliciousness verdict. URLScan visibility is fixed to "unlisted" for
+    client privacy — the submission is not publicly searchable.
     Scanning takes 10-20 seconds. Requires URLSCAN_API_KEY.
     """
-    return await scan_url(url, visibility)
+    return await scan_url(url)
 
 
 @mcp.tool()

@@ -50,20 +50,26 @@ async def dns_lookup(domain: str, record_types: list[str] | None = None, dkim_se
     try:
         domain_error = validate_domain_name(domain)
         if domain_error:
-            return {"error": "invalid_input", "detail": domain_error, "domain": domain}
+            return {
+                "error": "invalid_input",
+                "detail": domain_error,
+                "untrusted_input": {"domain": domain},
+            }
         if dkim_selector is not None:
             selector_error = validate_domain_name(dkim_selector)
             if selector_error:
                 return {
                     "error": "invalid_input",
                     "detail": f"DKIM selector: {selector_error}",
-                    "domain": domain,
+                    "untrusted_input": {"domain": domain, "dkim_selector": dkim_selector},
                 }
 
         if record_types is None:
             record_types = ["MX", "TXT", "A", "NS"]
 
-        result: dict = {"domain": domain}
+        # DNS response data — comes from authoritative servers, which for a
+        # phisher-owned domain are attacker-controlled. Wrap accordingly.
+        api: dict = {}
 
         # MX records
         if "MX" in record_types:
@@ -73,7 +79,7 @@ async def dns_lookup(domain: str, record_types: list[str] | None = None, dkim_se
                 parts = r.split()
                 if len(parts) >= 2:
                     mx_records.append({"priority": int(parts[0]), "host": parts[1].rstrip(".")})
-            result["mx_records"] = mx_records
+            api["mx_records"] = mx_records
 
         # TXT records (includes SPF)
         spf_record = None
@@ -84,7 +90,7 @@ async def dns_lookup(domain: str, record_types: list[str] | None = None, dkim_se
                 if txt.lower().startswith("v=spf1"):
                     spf_record = txt
                     break
-            result["spf_record"] = spf_record
+            api["spf_record"] = spf_record
 
         # DMARC (always query _dmarc.{domain})
         dmarc_raw = await _aquery(f"_dmarc.{domain}", "TXT")
@@ -94,33 +100,40 @@ async def dns_lookup(domain: str, record_types: list[str] | None = None, dkim_se
             if cleaned.lower().startswith("v=dmarc1"):
                 dmarc_record = cleaned
                 break
-        result["dmarc_record"] = dmarc_record
+        api["dmarc_record"] = dmarc_record
 
         # DKIM (requires selector)
         if dkim_selector:
             dkim_domain = f"{dkim_selector}._domainkey.{domain}"
             dkim_raw = await _aquery(dkim_domain, "TXT")
-            result["dkim_record"] = dkim_raw[0].strip('"') if dkim_raw else None
-            result["dkim_query"] = dkim_domain
+            api["dkim_record"] = dkim_raw[0].strip('"') if dkim_raw else None
+            api["dkim_query"] = dkim_domain
         else:
-            result["dkim_record"] = None
-            result["dkim_note"] = "DKIM verification requires a selector from the email headers. Pass dkim_selector if available."
+            api["dkim_record"] = None
+            api["dkim_note"] = "DKIM verification requires a selector from the email headers. Pass dkim_selector if available."
 
         # A records
         if "A" in record_types:
-            result["a_records"] = await _aquery(domain, "A")
+            api["a_records"] = await _aquery(domain, "A")
 
         # NS records
         if "NS" in record_types:
             ns_raw = await _aquery(domain, "NS")
-            result["ns_records"] = [r.rstrip(".") for r in ns_raw]
+            api["ns_records"] = [r.rstrip(".") for r in ns_raw]
 
-        # Summary flag
-        has_mx = bool(result.get("mx_records"))
+        # Summary flag (server-computed, trusted)
+        has_mx = bool(api.get("mx_records"))
         has_spf = spf_record is not None
         has_dmarc = dmarc_record is not None
-        result["has_mail_config"] = has_mx and (has_spf or has_dmarc)
 
-        return result
+        return {
+            "has_mail_config": has_mx and (has_spf or has_dmarc),
+            "untrusted_input": {"domain": domain, "dkim_selector": dkim_selector},
+            "untrusted_api_response": api,
+        }
     except Exception as e:
-        return {"error": "DNS lookup failed", "detail": sanitize_error(e), "domain": domain}
+        return {
+            "error": "DNS lookup failed",
+            "detail": sanitize_error(e),
+            "untrusted_input": {"domain": domain},
+        }

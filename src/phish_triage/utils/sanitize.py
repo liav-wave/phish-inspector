@@ -16,8 +16,13 @@ import re
 
 _CONTROL_CHARS_RE = re.compile(r'[\x00-\x08\x0e-\x1f\x7f]')
 # Zero-width / invisible characters used to hide content from humans:
-# ZWSP, ZWNJ, ZWJ, WORD JOINER, BOM.
+# ZWSP (U+200B), ZWNJ (U+200C), ZWJ (U+200D), WORD JOINER (U+2060), BOM (U+FEFF).
 _ZERO_WIDTH_RE = re.compile('[​‌‍⁠﻿]')
+# Unicode BiDi formatting characters. Used in `invoice‮fdp.exe` to make
+# a filename render right-to-left and disguise its real extension. Strip them
+# so the analyst sees the bytes as written.
+# LRE/RLE/PDF/LRO/RLO + LRI/RLI/FSI/PDI.
+_BIDI_RE = re.compile('[‪-‮⁦-⁩]')
 _ANSI_CSI_RE = re.compile(r'\x1b\[[0-9;]*[A-Za-z]')
 
 
@@ -39,6 +44,7 @@ def clean_untrusted_string(s: object, max_len: int = 500) -> str:
     text = _ANSI_CSI_RE.sub('', text)
     text = _CONTROL_CHARS_RE.sub('', text)
     text = _ZERO_WIDTH_RE.sub('', text)
+    text = _BIDI_RE.sub('', text)
     if len(text) > max_len:
         text = text[:max_len] + "…[truncated]"
     return text

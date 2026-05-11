@@ -6,6 +6,7 @@ import httpx
 
 from phish_triage.utils.errors import sanitize_error
 from phish_triage.utils.rate_limiter import abuseipdb_limiter
+from phish_triage.utils.sanitize import clean_untrusted_string
 from phish_triage.utils.validators import validate_ip
 
 
@@ -57,17 +58,25 @@ async def check_abuse_ip(ip_address: str, max_age_in_days: int = 90) -> dict:
 
             data = resp.json().get("data", {})
 
+            # See CLAUDE.md "Adversarial input" for the trust-tier wrapping
+            # contract. Numeric scores and booleans are trusted (provider
+            # cannot smuggle prompt text through an integer). The string
+            # fields are attacker-influenced and live in untrusted_api_response.
             return {
-                "ip_address": ip_address,
                 "abuse_confidence_score": data.get("abuseConfidenceScore", 0),
                 "total_reports": data.get("totalReports", 0),
                 "last_reported_at": data.get("lastReportedAt"),
-                "isp": data.get("isp", ""),
-                "country_code": data.get("countryCode", ""),
-                "usage_type": data.get("usageType", ""),
-                "domain": data.get("domain", ""),
                 "is_tor": data.get("isTor", False),
                 "is_whitelisted": data.get("isWhitelisted", False),
+                "untrusted_input": {
+                    "ip_address": ip_address,
+                },
+                "untrusted_api_response": {
+                    "isp": clean_untrusted_string(data.get("isp", ""), max_len=200),
+                    "country_code": clean_untrusted_string(data.get("countryCode", ""), max_len=10),
+                    "usage_type": clean_untrusted_string(data.get("usageType", ""), max_len=100),
+                    "domain": clean_untrusted_string(data.get("domain", ""), max_len=255),
+                },
             }
     except httpx.TimeoutException:
         return {"error": "timeout", "detail": "AbuseIPDB request timed out.", "ip_address": ip_address}

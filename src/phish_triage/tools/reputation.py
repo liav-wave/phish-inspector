@@ -8,6 +8,7 @@ import httpx
 
 from phish_triage.utils.errors import sanitize_error
 from phish_triage.utils.rate_limiter import virustotal_limiter, safe_browsing_limiter
+from phish_triage.utils.sanitize import clean_untrusted_string
 from phish_triage.utils.validators import validate_ip, validate_url
 
 
@@ -61,18 +62,35 @@ async def _check_virustotal(indicator: str, indicator_type: str, api_key: str) -
             malicious = stats.get("malicious", 0)
             total = sum(stats.values()) if stats else 0
 
-            # Get specific detections
+            # Get specific detections. Engine names are VT-controlled, but
+            # `result` strings are partially attacker-influenced (engines often
+            # echo back content extracted from the malware/URL).
             detections = []
             for engine, result in data.get("last_analysis_results", {}).items():
                 if result.get("category") == "malicious":
-                    detections.append({"engine": engine, "result": result.get("result", "malicious")})
+                    detections.append({
+                        "engine": clean_untrusted_string(engine, max_len=100),
+                        "result": clean_untrusted_string(result.get("result", "malicious"), max_len=200),
+                    })
 
+            # Categories is a dict of {engine: category_string} — sanitize values.
+            raw_categories = data.get("categories", {}) or {}
+            categories = {
+                clean_untrusted_string(k, max_len=100): clean_untrusted_string(v, max_len=100)
+                for k, v in raw_categories.items()
+            }
+
+            # Numeric ratios, dates, and community scores are trusted (no
+            # string injection surface). Engine names, result strings, and
+            # category strings are attacker-influenced — wrap.
             return {
                 "detection_ratio": f"{malicious}/{total}",
-                "detections": detections[:10],
                 "community_score": data.get("reputation", 0),
-                "categories": data.get("categories", {}),
                 "last_analysis_date": data.get("last_analysis_date"),
+                "untrusted_api_response": {
+                    "detections": detections[:10],
+                    "categories": categories,
+                },
             }
     except httpx.TimeoutException:
         return {"error": "timeout", "detail": "VirusTotal request timed out."}
@@ -110,7 +128,12 @@ async def _check_safe_browsing(indicator: str, api_key: str) -> dict:
 
             return {
                 "is_unsafe": len(matches) > 0,
-                "threat_types": [m.get("threatType", "") for m in matches],
+                "untrusted_api_response": {
+                    "threat_types": [
+                        clean_untrusted_string(m.get("threatType", ""), max_len=100)
+                        for m in matches
+                    ],
+                },
             }
     except httpx.TimeoutException:
         return {"error": "timeout", "detail": "Google Safe Browsing request timed out."}
@@ -130,12 +153,20 @@ async def check_reputation(indicator: str, indicator_type: str) -> dict:
     """
     validation_error = _validate_indicator(indicator, indicator_type)
     if validation_error:
-        return {"error": "invalid_input", "detail": validation_error, "indicator": indicator}
+        return {
+            "error": "invalid_input",
+            "detail": validation_error,
+            "untrusted_input": {"indicator": indicator, "indicator_type": indicator_type},
+        }
 
     vt_key = os.environ.get("VIRUSTOTAL_API_KEY")
     gsb_key = os.environ.get("GOOGLE_SAFE_BROWSING_API_KEY")
 
-    result: dict = {"indicator": indicator, "indicator_type": indicator_type}
+    # The indicator came from analyzing email content — attacker-authored.
+    # VT and Safe Browsing sub-results have their own trust-tier wrapping.
+    result: dict = {
+        "untrusted_input": {"indicator": indicator, "indicator_type": indicator_type},
+    }
 
     if vt_key:
         result["virustotal"] = await _check_virustotal(indicator, indicator_type, vt_key)

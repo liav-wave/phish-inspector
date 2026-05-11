@@ -111,10 +111,11 @@ async def test_no_redirect():
         result = await follow_redirects("https://example.com")
 
     assert result["reached_final"] is True
-    assert result["final_url"] == "https://example.com"
     assert result["total_redirects"] == 0
-    assert len(result["redirect_chain"]) == 1
-    assert result["redirect_chain"][0]["status_code"] == 200
+    api = result["untrusted_api_response"]
+    assert api["final_url"] == "https://example.com"
+    assert len(api["redirect_chain"]) == 1
+    assert api["redirect_chain"][0]["status_code"] == 200
 
 
 async def test_simple_redirect_chain():
@@ -141,13 +142,14 @@ async def test_simple_redirect_chain():
         result = await follow_redirects("https://start.example.com/link")
 
     assert result["reached_final"] is True
-    assert result["url"] == "https://start.example.com/link"
-    assert result["final_url"] == "https://final.example.com/page"
     assert result["total_redirects"] == 2
-    assert len(result["redirect_chain"]) == 3
-    assert result["redirect_chain"][0]["status_code"] == 301
-    assert result["redirect_chain"][1]["status_code"] == 302
-    assert result["redirect_chain"][2]["status_code"] == 200
+    assert result["untrusted_input"]["url"] == "https://start.example.com/link"
+    api = result["untrusted_api_response"]
+    assert api["final_url"] == "https://final.example.com/page"
+    assert len(api["redirect_chain"]) == 3
+    assert api["redirect_chain"][0]["status_code"] == 301
+    assert api["redirect_chain"][1]["status_code"] == 302
+    assert api["redirect_chain"][2]["status_code"] == 200
 
 
 async def test_max_redirects_exceeded():
@@ -241,7 +243,7 @@ async def test_head_fallback_to_get():
         result = await follow_redirects("https://example.com/page")
 
     assert result["reached_final"] is True
-    assert result["final_url"] == "https://example.com/page"
+    assert result["untrusted_api_response"]["final_url"] == "https://example.com/page"
     mock_client.head.assert_called_once()
     mock_client.get.assert_called_once()
 
@@ -263,7 +265,8 @@ async def test_timeout_handling():
 
     assert result["reached_final"] is False
     assert result["error"] == "timeout"
-    assert len(result["redirect_chain"]) == 1  # first hop recorded before timeout
+    # first hop recorded before timeout
+    assert len(result["untrusted_api_response"]["redirect_chain"]) == 1
 
 
 async def test_relative_redirect():
@@ -286,5 +289,5 @@ async def test_relative_redirect():
         result = await follow_redirects("https://example.com/old-path")
 
     assert result["reached_final"] is True
-    assert result["final_url"] == "https://example.com/new-path"
+    assert result["untrusted_api_response"]["final_url"] == "https://example.com/new-path"
     assert result["total_redirects"] == 1

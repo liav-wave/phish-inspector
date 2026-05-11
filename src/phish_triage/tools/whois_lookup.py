@@ -67,18 +67,31 @@ async def whois_lookup(domain: str) -> dict:
 
         domain_age = _days_since(creation_date)
 
+        # Dates and the privacy bool are server-computed and trusted. The
+        # provider strings (registrar, country, name servers) are influenced
+        # by the registrant — attacker-controlled when the domain is theirs.
         return {
-            "domain": domain,
-            "registrar": clean_untrusted_string(w.registrar, max_len=200),
             "creation_date": creation_date.isoformat() if creation_date else None,
             "expiration_date": expiration_date.isoformat() if expiration_date else None,
             "updated_date": updated_date.isoformat() if updated_date else None,
             "domain_age_days": domain_age,
-            "registrant_country": clean_untrusted_string(w.get("country"), max_len=100),
             "privacy_protected": privacy_protected,
-            "name_servers": sorted({clean_untrusted_string(ns, max_len=255) for ns in name_servers}),
+            "untrusted_input": {"domain": domain},
+            "untrusted_api_response": {
+                "registrar": clean_untrusted_string(w.registrar, max_len=200),
+                "registrant_country": clean_untrusted_string(w.get("country"), max_len=100),
+                "name_servers": sorted({clean_untrusted_string(ns, max_len=255) for ns in name_servers}),
+            },
         }
     except asyncio.TimeoutError:
-        return {"error": "timeout", "detail": "WHOIS lookup timed out after 15s.", "domain": domain}
+        return {
+            "error": "timeout",
+            "detail": "WHOIS lookup timed out after 15s.",
+            "untrusted_input": {"domain": domain},
+        }
     except Exception as e:
-        return {"error": "WHOIS lookup failed", "detail": sanitize_error(e), "domain": domain}
+        return {
+            "error": "WHOIS lookup failed",
+            "detail": sanitize_error(e),
+            "untrusted_input": {"domain": domain},
+        }

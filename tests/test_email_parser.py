@@ -68,39 +68,42 @@ def test_hidden_image_tracking():
 
 async def test_parse_phishing_email_1(phishing_email_1):
     result = parse_email_structure(phishing_email_1)
-    assert len(result["urls"]) > 0
-    assert "paypa1-security.com" in result["domains"]
-    assert result["sender_domain"] == "paypa1-security.com"
+    ui = result["untrusted_input"]
+    assert len(ui["urls"]) > 0
+    assert "paypa1-security.com" in ui["domains"]
+    assert ui["sender_domain"] == "paypa1-security.com"
     assert result["has_html"] is True
     assert result["has_tracking_pixels"] is True
-    assert len(result["url_mismatches"]) > 0
+    assert len(ui["url_mismatches"]) > 0
 
 
 async def test_parse_phishing_email_2(phishing_email_2):
     result = parse_email_structure(phishing_email_2)
-    assert "targetcorp-docs.com" in result["domains"]
-    assert result["sender_domain"] == "targetcorp.com"
+    ui = result["untrusted_input"]
+    assert "targetcorp-docs.com" in ui["domains"]
+    assert ui["sender_domain"] == "targetcorp.com"
     assert result["has_html"] is True
     # URL mismatch: display shows docs.targetcorp.com but href is targetcorp-docs.com
-    assert len(result["url_mismatches"]) > 0
+    assert len(ui["url_mismatches"]) > 0
 
 
 async def test_parse_legitimate_email(legitimate_email):
     result = parse_email_structure(legitimate_email)
-    assert result["sender_domain"] == "github.com"
-    assert "github.com" in result["domains"]
+    ui = result["untrusted_input"]
+    assert ui["sender_domain"] == "github.com"
+    assert "github.com" in ui["domains"]
     assert result["has_html"] is False
     assert result["has_tracking_pixels"] is False
-    assert len(result["url_mismatches"]) == 0
+    assert len(ui["url_mismatches"]) == 0
 
 
 async def test_parse_email_extracts_ips(phishing_email_1):
     result = parse_email_structure(phishing_email_1)
     # Should find IPs from headers
-    assert len(result["ip_addresses"]) > 0
+    assert len(result["untrusted_input"]["ip_addresses"]) > 0
 
 
 async def test_parse_plain_text_body():
     body = "Check out https://example.com and visit https://test.org"
     result = parse_email_structure(body)
-    assert len(result["urls"]) == 2
+    assert len(result["untrusted_input"]["urls"]) == 2

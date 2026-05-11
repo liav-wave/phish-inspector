@@ -52,9 +52,10 @@ async def test_dns_lookup_with_mail_config():
         result = await dns_lookup("example.com")
 
     assert result["has_mail_config"] is True
-    assert result["mx_records"][0]["host"] == "mail.example.com"
-    assert "v=spf1" in result["spf_record"]
-    assert "v=DMARC1" in result["dmarc_record"]
+    api = result["untrusted_api_response"]
+    assert api["mx_records"][0]["host"] == "mail.example.com"
+    assert "v=spf1" in api["spf_record"]
+    assert "v=DMARC1" in api["dmarc_record"]
 
 
 async def test_dns_lookup_no_mail_config():
@@ -62,9 +63,10 @@ async def test_dns_lookup_no_mail_config():
         result = await dns_lookup("no-mail.example.com")
 
     assert result["has_mail_config"] is False
-    assert result["mx_records"] == []
-    assert result["spf_record"] is None
-    assert result["dmarc_record"] is None
+    api = result["untrusted_api_response"]
+    assert api["mx_records"] == []
+    assert api["spf_record"] is None
+    assert api["dmarc_record"] is None
 
 
 async def test_dns_lookup_with_dkim_selector():
@@ -77,17 +79,19 @@ async def test_dns_lookup_with_dkim_selector():
     with patch("phish_triage.tools.dns_lookup._query", side_effect=side_effect):
         result = await dns_lookup("example.com", dkim_selector="selector1")
 
-    assert result["dkim_record"] is not None
-    assert "v=DKIM1" in result["dkim_record"]
-    assert result["dkim_query"] == "selector1._domainkey.example.com"
+    api = result["untrusted_api_response"]
+    assert api["dkim_record"] is not None
+    assert "v=DKIM1" in api["dkim_record"]
+    assert api["dkim_query"] == "selector1._domainkey.example.com"
 
 
 async def test_dns_lookup_no_dkim_selector():
     with patch("phish_triage.tools.dns_lookup._query", return_value=[]):
         result = await dns_lookup("example.com")
 
-    assert result["dkim_record"] is None
-    assert "dkim_note" in result
+    api = result["untrusted_api_response"]
+    assert api["dkim_record"] is None
+    assert "dkim_note" in api
 
 
 async def test_dns_nxdomain_handling():

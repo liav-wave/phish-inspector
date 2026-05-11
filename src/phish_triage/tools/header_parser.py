@@ -6,11 +6,23 @@ import re
 from datetime import datetime
 
 from phish_triage.utils.errors import sanitize_error
+from phish_triage.utils.sanitize import clean_untrusted_string
 
 
 def _parse_authentication_results(header_value: str) -> dict:
-    """Parse Authentication-Results header into structured SPF/DKIM/DMARC verdicts."""
-    results = {"spf": None, "dkim": None, "dmarc": None, "raw": header_value}
+    """Parse Authentication-Results header into structured SPF/DKIM/DMARC verdicts.
+
+    Returned dict lives inside `untrusted_input` in the tool response. The
+    extracted verdict tokens (spf/dkim/dmarc) come from a constrained alphabet
+    (`\\w+` post-regex) so they need no further cleaning; the `raw` field is
+    sanitized to remove control/zero-width/BiDi bytes.
+    """
+    results = {
+        "spf": None,
+        "dkim": None,
+        "dmarc": None,
+        "raw": clean_untrusted_string(header_value, max_len=1000),
+    }
 
     if not header_value:
         return results
@@ -34,22 +46,27 @@ def _parse_authentication_results(header_value: str) -> dict:
 
 
 def _parse_received_hops(msg: email.message.Message) -> list[dict]:
-    """Extract relay hops from Received headers (newest first in email, we reverse)."""
+    """Extract relay hops from Received headers (newest first in email, we reverse).
+
+    All string fields are attacker-influenced (the sender's MTA can put nearly
+    arbitrary bytes in a Received header until it reaches a relay we trust).
+    Clean every string returned to the model.
+    """
     hops = []
     received_headers = msg.get_all("Received", [])
 
     for header in received_headers:
-        hop = {"raw": str(header).strip()}
+        hop = {"raw": clean_untrusted_string(str(header).strip(), max_len=1000)}
 
         # Extract "from" server
         from_match = re.search(r'from\s+([\w.-]+)', str(header), re.IGNORECASE)
         if from_match:
-            hop["from"] = from_match.group(1)
+            hop["from"] = clean_untrusted_string(from_match.group(1), max_len=255)
 
         # Extract "by" server — handle IPv6 (2002:a05:...) and FQDNs
         by_match = re.search(r'by\s+([\w.:%-]+)', str(header), re.IGNORECASE)
         if by_match:
-            hop["by"] = by_match.group(1)
+            hop["by"] = clean_untrusted_string(by_match.group(1), max_len=255)
 
         # Extract IP — check bracketed [ip] first, then parenthesized (ip) or bare ip
         ip_match = re.search(r'\[(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})\]', str(header))
@@ -57,13 +74,14 @@ def _parse_received_hops(msg: email.message.Message) -> list[dict]:
             # Match IP in parentheses like (efianalytics.com. 216.244.76.116)
             ip_match = re.search(r'[(\s](\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})[)\s]', str(header))
         if ip_match:
+            # IP literal; only need length safety, not control-char stripping.
             hop["ip"] = ip_match.group(1)
 
         # Extract timestamp
         date_match = re.search(r';\s*(.+)$', str(header))
         if date_match:
             date_str = date_match.group(1).strip()
-            hop["timestamp_raw"] = date_str
+            hop["timestamp_raw"] = clean_untrusted_string(date_str, max_len=100)
             try:
                 parsed = email.utils.parsedate_to_datetime(date_str)
                 hop["timestamp"] = parsed.isoformat()
@@ -120,8 +138,14 @@ async def parse_email_headers(raw_headers: str) -> dict:
         auth_header = auth_results_raw or arc_auth_raw
         authentication_results = _parse_authentication_results(auth_header)
 
-        # DKIM selector
-        dkim_selector = _extract_dkim_selector(msg)
+        # DKIM selector — clean once at the extraction site so both copies
+        # of this string (the top-level field and the nested one inside
+        # authentication_results) come from the sanitized value.
+        dkim_selector_raw = _extract_dkim_selector(msg)
+        dkim_selector = (
+            clean_untrusted_string(dkim_selector_raw, max_len=100)
+            if dkim_selector_raw else None
+        )
         if dkim_selector:
             authentication_results["dkim_selector"] = dkim_selector
 
@@ -133,23 +157,33 @@ async def parse_email_headers(raw_headers: str) -> dict:
         if received_hops:
             originating_ip = received_hops[0].get("ip")
 
-        # X-headers
+        # X-headers — both keys and values are attacker-influenced.
         x_headers = {}
         for key in msg.keys():
             if key.lower().startswith("x-"):
-                x_headers[key] = str(msg[key])
+                x_headers[clean_untrusted_string(key, max_len=100)] = clean_untrusted_string(
+                    str(msg[key]), max_len=500
+                )
 
+        # Header content is entirely attacker-authored: every field below
+        # was written by the sender's MTA chain. authentication_results is
+        # set by the receiving MTA — partial trust, but we keep it inside
+        # the untrusted container because we cannot verify which hop wrote
+        # it. originating_ip is an IP literal so no string-injection surface,
+        # but it's still attacker-influenced data.
         return {
-            "from_address": from_address,
-            "from_display_name": display_name,
-            "reply_to": reply_to,
-            "return_path": return_path,
-            "received_hops": received_hops,
-            "authentication_results": authentication_results,
-            "originating_ip": originating_ip,
-            "message_id": message_id,
-            "dkim_selector": dkim_selector,
-            "x_headers": x_headers,
+            "untrusted_input": {
+                "from_address": clean_untrusted_string(from_address, max_len=320),
+                "from_display_name": clean_untrusted_string(display_name, max_len=200),
+                "reply_to": clean_untrusted_string(reply_to, max_len=320),
+                "return_path": clean_untrusted_string(return_path, max_len=320),
+                "received_hops": received_hops,
+                "authentication_results": authentication_results,
+                "originating_ip": originating_ip,
+                "message_id": clean_untrusted_string(message_id, max_len=255),
+                "dkim_selector": dkim_selector,
+                "x_headers": x_headers,
+            },
         }
     except Exception as e:
         return {"error": "Header parsing failed", "detail": sanitize_error(e)}
