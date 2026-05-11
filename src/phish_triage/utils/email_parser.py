@@ -5,6 +5,8 @@ import email.policy
 import re
 from html.parser import HTMLParser
 
+from phish_triage.utils.sanitize import clean_untrusted_string
+
 
 # Regex patterns
 URL_RE = re.compile(r'https?://[^\s<>"\')\]]+', re.IGNORECASE)
@@ -68,7 +70,10 @@ class _LinkExtractor(HTMLParser):
     def handle_endtag(self, tag: str) -> None:
         if tag == "a" and self._current_href is not None:
             display = "".join(self._current_text).strip()
-            self.links.append({"href": self._current_href, "display_text": display})
+            self.links.append({
+                "href": clean_untrusted_string(self._current_href, max_len=2048),
+                "display_text": clean_untrusted_string(display, max_len=500),
+            })
             self._current_href = None
             self._current_text = []
 

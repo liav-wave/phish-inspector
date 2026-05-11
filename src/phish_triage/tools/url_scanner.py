@@ -7,6 +7,7 @@ import httpx
 
 from phish_triage.utils.errors import sanitize_error
 from phish_triage.utils.rate_limiter import urlscan_limiter
+from phish_triage.utils.sanitize import clean_untrusted_string
 from phish_triage.utils.validators import validate_url
 
 
@@ -78,15 +79,24 @@ async def scan_url(url: str, visibility: str = "unlisted") -> dict:
                     return {
                         "scan_id": scan_uuid,
                         "scan_url": f"https://urlscan.io/result/{scan_uuid}/",
-                        "effective_url": page.get("url", url),
-                        "redirect_chain": [r.get("url", "") for r in data.get("data", {}).get("requests", [])[:5]],
-                        "page_domain": page.get("domain", ""),
-                        "page_title": page.get("title", ""),
-                        "server": page.get("server", ""),
-                        "contacted_domains": lists.get("domains", [])[:20],
+                        "effective_url": clean_untrusted_string(page.get("url", url), max_len=2048),
+                        "redirect_chain": [
+                            clean_untrusted_string(r.get("url", ""), max_len=2048)
+                            for r in data.get("data", {}).get("requests", [])[:5]
+                        ],
+                        "page_domain": clean_untrusted_string(page.get("domain", ""), max_len=255),
+                        "page_title": clean_untrusted_string(page.get("title", ""), max_len=500),
+                        "server": clean_untrusted_string(page.get("server", ""), max_len=200),
+                        "contacted_domains": [
+                            clean_untrusted_string(d, max_len=255)
+                            for d in lists.get("domains", [])[:20]
+                        ],
                         "is_malicious": verdicts.get("malicious", False),
                         "screenshot_url": f"https://urlscan.io/screenshots/{scan_uuid}.png",
-                        "categories": lists.get("categories", []),
+                        "categories": [
+                            clean_untrusted_string(c, max_len=100)
+                            for c in lists.get("categories", [])
+                        ],
                         "url": url,
                     }
 

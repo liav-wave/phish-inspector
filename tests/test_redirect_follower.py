@@ -8,6 +8,22 @@ import httpx
 from phish_triage.tools.redirect_follower import follow_redirects
 
 
+@pytest.fixture(autouse=True)
+def _stub_dns(monkeypatch):
+    """Stub DNS resolution so tests don't hit the network.
+
+    Default: every name resolves to a single benign public IP. Tests that
+    care about a specific resolution can override `phish_triage.utils.validators._resolve_hostname`.
+
+    Note: must be a real public IP (`ipaddress.is_private=False`). RFC 5737
+    TEST-NET ranges are flagged private by Python's `ipaddress` module.
+    """
+    monkeypatch.setattr(
+        "phish_triage.utils.validators._resolve_hostname",
+        lambda hostname: ["8.8.8.8"],
+    )
+
+
 async def test_invalid_url_no_scheme():
     result = await follow_redirects("not-a-url")
     assert result["error"] == "invalid_input"
@@ -22,6 +38,61 @@ async def test_private_ip_rejected():
 async def test_localhost_rejected():
     result = await follow_redirects("http://localhost:8080")
     assert result["error"] == "invalid_input"
+
+
+async def test_dns_resolves_to_private_ip_rejected(monkeypatch):
+    """Hostname that resolves to a private/internal IP must be rejected
+    even if the URL doesn't contain a literal private IP. This is the
+    GCE-metadata / LAN-pivot SSRF vector.
+    """
+    monkeypatch.setattr(
+        "phish_triage.utils.validators._resolve_hostname",
+        lambda hostname: ["169.254.169.254"],
+    )
+    result = await follow_redirects("https://metadata-attack.example/")
+    assert result["error"] == "invalid_input"
+    assert "169.254.169.254" in result["detail"]
+
+
+async def test_dns_unresolvable_rejected(monkeypatch):
+    monkeypatch.setattr(
+        "phish_triage.utils.validators._resolve_hostname",
+        lambda hostname: [],
+    )
+    result = await follow_redirects("https://does-not-resolve.example/")
+    assert result["error"] == "invalid_input"
+    assert "resolve" in result["detail"].lower()
+
+
+async def test_redirect_to_dns_private_blocked(monkeypatch):
+    """Initial URL resolves OK, but the redirect target resolves to a
+    private IP. Must be caught at next-hop validation.
+    """
+    resolutions = {
+        "start.example.com": ["8.8.8.8"],
+        "evil.example": ["169.254.169.254"],
+    }
+    monkeypatch.setattr(
+        "phish_triage.utils.validators._resolve_hostname",
+        lambda hostname: resolutions.get(hostname, ["8.8.8.8"]),
+    )
+
+    resp_redirect = MagicMock()
+    resp_redirect.status_code = 302
+    resp_redirect.headers = {"location": "http://evil.example/admin", "server": "nginx"}
+
+    with patch("httpx.AsyncClient") as mock_client_cls:
+        mock_client = AsyncMock()
+        mock_client.head.return_value = resp_redirect
+        mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+        mock_client.__aexit__ = AsyncMock(return_value=None)
+        mock_client_cls.return_value = mock_client
+
+        result = await follow_redirects("https://start.example.com/")
+
+    assert result["reached_final"] is False
+    assert result["error"] == "ssrf_blocked"
+    assert "169.254.169.254" in result["detail"]
 
 
 async def test_no_redirect():

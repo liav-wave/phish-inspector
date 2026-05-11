@@ -8,3 +8,6 @@ __pycache__/
 dist/
 build/
 .venv/
+spamspamspam/ 
+*.tar.gz
+.DS_Store

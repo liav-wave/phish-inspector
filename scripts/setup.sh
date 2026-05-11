@@ -43,6 +43,8 @@ fi
 if [[ -f "$PROJECT_DIR/.env" ]]; then
     LAUNCHER="launch-mcp-env.sh"
     LAUNCHER_REASON=".env present in project root"
+    # Tighten .env perms: API keys are user-only readable.
+    chmod 600 "$PROJECT_DIR/.env"
 elif [[ -x "/usr/local/bin/op" ]] || command -v op >/dev/null 2>&1; then
     LAUNCHER="launch-mcp.sh"
     LAUNCHER_REASON="1Password CLI available"

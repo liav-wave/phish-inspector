@@ -6,7 +6,7 @@ dependencies = [
     "mcp==1.26.0",
     "dnspython==2.7.0",
     "httpx==0.28.1",
-    "python-dotenv==1.0.1",
+    "python-dotenv==1.2.2",
     "python-dateutil==2.9.0.post0",
     "python-whois==0.9.6",
 ]

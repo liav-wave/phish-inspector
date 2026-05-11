@@ -143,7 +143,11 @@ async def check_reputation(indicator: str, indicator_type: str) -> dict:
         result["virustotal"] = {"error": "not_configured", "detail": "VIRUSTOTAL_API_KEY environment variable is not set. Get a free API key from virustotal.com."}
 
     if gsb_key:
-        # Safe Browsing works with URLs; for domains/IPs, construct a URL
+        # Safe Browsing works with URLs; for domains/IPs, construct a URL.
+        # Indicator format/safety has already been checked by `_validate_indicator`
+        # above (domain regex, IP private-range check). If that contract changes,
+        # add a re-validation here — the constructed URL is sent to Google's API,
+        # not used for an outbound fetch.
         sb_indicator = indicator
         if indicator_type == "domain":
             sb_indicator = f"http://{indicator}/"

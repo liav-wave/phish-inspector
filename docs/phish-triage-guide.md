@@ -10,43 +10,62 @@ This guide covers: install, day-to-day use, what data is sent where, and how to 
 
 You'll need:
 
-- Claude Cowork installed and running
-- Google Cloud SDK (`gcloud`) installed and signed in with the Google Workspace account Wavefront granted access to
-- The `phish-triage.md` skill file (sent to you separately)
-- The MCP server URL (sent to you separately)
+- Claude Desktop installed (any recent version)
+- macOS (Apple Silicon or Intel)
+- The phish-triage tarball (`phish-triage-v<X.Y.Z>-griffon.tar.gz`) — sent separately by Wavefront
+- Three API keys (URLScan, AbuseIPDB, Google Safe Browsing) — sent separately by Wavefront over a secure channel
 
 ### Steps
-
-1. **Install gcloud** if you don't have it: https://cloud.google.com/sdk/docs/install
-   Then sign in: `gcloud auth login` — use your work Google account.
-
-2. **Drop the skill file in place:**
+1. **Install uv** (the Python package manager phish-triage uses) via the official installer:
    ```bash
-   mkdir -p ~/.claude/skills
-   cp phish-triage.md ~/.claude/skills/
+   curl -LsSf https://astral.sh/uv/install.sh | sh
+   ```
+   If your security policy disallows curl-pipe-shell, download the signed `.pkg` from https://github.com/astral-sh/uv/releases and verify the Apple notarization signature before running.
+
+2. **Extract the tarball** somewhere stable:
+   ```bash
+   mkdir -p ~/wavefront
+   cd ~/wavefront
+   tar -xzf ~/Downloads/phish-triage-v<X.Y.Z>-griffon.tar.gz
+   cd phish-triage
    ```
 
-3. **Add the MCP server to your Claude config.** Open `~/.claude/settings.json` (create it if it doesn't exist) and add the `mcpServers` entry:
-   ```json
-   {
-     "mcpServers": {
-       "phish-triage": {
-         "type": "streamable-http",
-         "url": "<URL provided by Wavefront>",
-         "headers": {
-           "Authorization": "Bearer $(gcloud auth print-identity-token)"
-         }
-       }
-     }
-   }
+3. **Initial set up: Drop the API keys into a local `.env`:**
+   For initial testing of this system only, we recommend API keys be place in the .env file in the project. Once we have validated the tool and deployment pipeline, we'll be migrating to API key management using 1Password's Command Line Interface tool. 
+
+   ```bash
+   cp .env.example .env
+   # Open .env in any editor and paste in the three keys Wavefront sent.
+   # The file should end up looking like:
+   #   URLSCAN_API_KEY=019d...
+   #   ABUSEIPDB_API_KEY=a528...
+   #   GOOGLE_SAFE_BROWSING_API_KEY=AIzaSy...
+   chmod 600 .env  # restrict to your user only
    ```
-   If the file already has other content, merge — don't replace.
+   `.env` is gitignored and stays local on your machine. The keys are valuable — if your laptop is lost or compromised, contact Wavefront immediately so we can rotate.
 
-4. **Restart Cowork.** Type `/mcp` to verify — you should see `phish-triage` connected with 8 tools.
 
-### Token expiry
+4. **Install pinned Python dependencies:**
+   ```bash
+   uv sync --frozen
+   ```
+   This installs the exact versions from the committed lockfile. ~1 minute typically.
 
-`gcloud auth print-identity-token` returns a token valid for ~1 hour. If the connection stops working partway through the day, restart Cowork (which re-runs the command) — that's the fastest fix.
+5. **Generate the Claude Desktop config:**
+   ```bash
+   bash scripts/setup.sh
+   ```
+   Expected output includes `launcher: launch-mcp-env.sh (.env present in project root)`. The script writes `.mcp.json` with absolute paths for your machine and reports whether the runtime dependencies are reachable. It does not make network requests, install packages, or modify anything outside this project directory — feel free to read it first (`less scripts/setup.sh`).
+
+6. **Open the project in Claude Desktop.** If it was already running, Cmd+Q and reopen. Open `~/wavefront/phish-triage` as the working directory in the Code tab. The MCP server and the skill load automatically.
+
+7. **Smoke test.** In a Code-tab conversation, paste a sample email and ask Claude to triage it. The skill should auto-trigger and the analysis tools should fire.
+
+### Updating, recovering, switching to 1Password
+
+- **New version from Wavefront** arrives as a fresh tarball. Extract alongside the old one, copy your existing `.env` over, re-run `uv sync --frozen` and `bash scripts/setup.sh`.
+- **MCP server stops responding mid-session:** Cmd+Q Claude Desktop and reopen. That re-spawns the MCP server child process — clean reset.
+- **Migrating to 1Password (recommended once Wavefront has your vault ready):** delete `.env`, accept the 1Password vault invite, enable 1Password CLI in the 1Password app *(Settings → Developer)*, then re-run `bash scripts/setup.sh`. It'll detect the missing `.env` plus the available `op` and switch the launcher automatically. After that, API keys never live on disk.
 
 ---
 
@@ -90,7 +109,9 @@ Some phishing URLs contain unique per-recipient identifiers (long random strings
 
 ### What Wavefront sees
 
-The MCP server itself does not log email content or extracted indicators — only startup messages and unhandled errors (with sensitive data scrubbed). Wavefront cannot see which emails you've analyzed.
+Nothing. The phish-triage MCP server runs entirely on your machine — there is no Wavefront-hosted backend. Email content, extracted indicators, and verdicts all stay local; only the third-party services in the table above receive anything (and only the indicators, never the email itself).
+
+Wavefront's only operational role is shipping you tarball updates and rotating API keys when needed.
 
 ---
 

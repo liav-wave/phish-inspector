@@ -6,6 +6,7 @@ import dns.resolver
 import dns.exception
 
 from phish_triage.utils.errors import sanitize_error
+from phish_triage.utils.validators import validate_domain_name
 
 
 TIMEOUT = 5.0  # seconds per query
@@ -47,6 +48,18 @@ async def dns_lookup(domain: str, record_types: list[str] | None = None, dkim_se
         Structured DNS data including MX, SPF, DMARC, DKIM, and nameserver information.
     """
     try:
+        domain_error = validate_domain_name(domain)
+        if domain_error:
+            return {"error": "invalid_input", "detail": domain_error, "domain": domain}
+        if dkim_selector is not None:
+            selector_error = validate_domain_name(dkim_selector)
+            if selector_error:
+                return {
+                    "error": "invalid_input",
+                    "detail": f"DKIM selector: {selector_error}",
+                    "domain": domain,
+                }
+
         if record_types is None:
             record_types = ["MX", "TXT", "A", "NS"]
 

@@ -50,7 +50,8 @@ When adding a new tool to `server.py`, stack the decorators: `@mcp.tool()` then 
 ### API keys must be protected
 
 - API keys are loaded from environment variables, never hardcoded.
-- In production (Cloud Run), keys come from Secret Manager via `--set-secrets` — never `--set-env-vars`.
+- For the active stdio deployment, keys come from the client's `.env` file (mode `0600`) or, in the steady-state 1Password-backed launcher (`scripts/launch-mcp.sh`), from a `Wavefront-Clients` vault via `op run` — never written to disk in the latter.
+- For the legacy Cloud Run path (`wip/cloud-run/`), keys come from Secret Manager via `--set-secrets` — never `--set-env-vars`.
 - The Google Safe Browsing API key is passed via `x-goog-api-key` header, not as a URL query parameter.
 - Error messages are sanitized to prevent key leakage (see above).
 - `.env` is in `.gitignore`. Only `.env.example` (with empty values) is committed.
@@ -122,55 +123,25 @@ uv run pytest -x                      # stop on first failure
 
 If an API key is suspected compromised:
 
-1. **Rotate immediately.** Generate a new key at the provider (URLScan.io, VirusTotal, Google Cloud Console, AbuseIPDB) and update Secret Manager:
-   ```bash
-   echo -n "NEW_KEY" | gcloud secrets versions add <secret-name> --data-file=-
-   ```
-2. **Redeploy** to pick up the new secret version: `./scripts/deploy.sh`
-3. **Audit access logs.** Check Secret Manager access logs for unauthorized reads:
-   ```bash
-   gcloud logging read 'resource.type="audited_resource" AND protoPayload.serviceName="secretmanager.googleapis.com"' --limit=50
-   ```
-4. **Check Cloud Run logs** for unusual tool invocation patterns (high volume, unusual IPs/domains being scanned).
-5. **Revoke the old key** at the provider after confirming the new key is working.
-6. **Notify the team** if the compromise may have exposed client email indicators to unauthorized parties.
+1. **Rotate at the provider.** Generate a new key at the provider (URLScan.io, VirusTotal, Google Cloud Console, AbuseIPDB).
+2. **Update each client deployment** with the new key:
+   - **`.env` clients (first-deploy form-factor):** push a fresh `.env` to the client over a secure channel (1Password share or similar). They replace the existing `.env` and restart Claude Desktop. Confirm `.env` lands with mode `0600`.
+   - **1Password-backed clients (`launch-mcp.sh`):** update the relevant item under `Wavefront-Clients/<CODENAME>_<KEY_NAME>` and ask the client to restart Claude Desktop so the next `op run` picks up the new value.
+3. **Revoke the old key** at the provider after confirming the new key is working in at least one client.
+4. **Check provider-side dashboards** (URLScan, VT, GSB, AbuseIPDB) for unusual query volume or query origins prior to rotation — that's the only audit trail available for the desktop deployment.
+5. **Notify the client** if the compromise may have exposed indicators submitted from their email triage to unauthorized parties.
 
-## Deployment (Cloud Run)
+For the legacy Cloud Run path, the rotation procedure (Secret Manager versions + `gcloud logging read`) is documented in `wip/cloud-run/deploy-runbook.md`.
 
-Prerequisites: `gcloud` CLI authenticated, a GCP project with Cloud Run and Secret Manager enabled.
+## Deployment
 
-```bash
-export GCP_PROJECT_ID=your-project-id
+The active per-client deployment is a local-stdio MCP server launched by Claude
+Desktop from a tarball extracted on the client laptop. End-to-end procedure:
 
-# One-time: create secrets in Secret Manager (paste each key when prompted)
-echo -n "YOUR_KEY" | gcloud secrets create urlscan-api-key --data-file=-
-echo -n "YOUR_KEY" | gcloud secrets create virustotal-api-key --data-file=-
-echo -n "YOUR_KEY" | gcloud secrets create google-safe-browsing-api-key --data-file=-
-echo -n "YOUR_KEY" | gcloud secrets create abuseipdb-api-key --data-file=-
+- Client-facing user guide: `docs/phish-triage-guide.md`
+- Internal operator runbook: `docs/internal/desktop-skill-deploy.md`
+- Build a client tarball from the current HEAD: `scripts/build-tarball.sh <codename>`
 
-# Deploy (uses --set-secrets to inject keys from Secret Manager)
-./scripts/deploy.sh
-
-# Grant a user access
-gcloud run services add-iam-policy-binding phish-triage \
-  --region=us-central1 \
-  --member='user:someone@yourco.com' \
-  --role='roles/run.invoker'
-```
-
-Staff connect via Claude Desktop/Code MCP config:
-```json
-{
-  "mcpServers": {
-    "phish-triage": {
-      "type": "streamable-http",
-      "url": "https://phish-triage-HASH-uc.a.run.app/mcp",
-      "headers": {
-        "Authorization": "Bearer $(gcloud auth print-identity-token)"
-      }
-    }
-  }
-}
-```
-
-Local Docker test: `docker build -t phish-triage . && docker run -p 8080:8080 phish-triage`
+The legacy Cloud Run / hosted-variant deployment is preserved in `wip/cloud-run/`
+but is not in active use. Read `wip/cloud-run/SECURITY-DEBT.md` before
+resurrecting it for any client.

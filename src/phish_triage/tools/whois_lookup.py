@@ -4,6 +4,8 @@ import asyncio
 from datetime import datetime, timezone
 
 from phish_triage.utils.errors import sanitize_error
+from phish_triage.utils.sanitize import clean_untrusted_string
+from phish_triage.utils.validators import validate_domain_name
 from whois import whois
 
 
@@ -43,6 +45,10 @@ async def whois_lookup(domain: str) -> dict:
         Structured WHOIS data including registrar, dates, age, and privacy status.
     """
     try:
+        domain_error = validate_domain_name(domain)
+        if domain_error:
+            return {"error": "invalid_input", "detail": domain_error, "domain": domain}
+
         w = await asyncio.wait_for(asyncio.to_thread(whois, domain), timeout=15.0)
 
         creation_date = _to_datetime(w.creation_date)
@@ -63,14 +69,14 @@ async def whois_lookup(domain: str) -> dict:
 
         return {
             "domain": domain,
-            "registrar": w.registrar,
+            "registrar": clean_untrusted_string(w.registrar, max_len=200),
             "creation_date": creation_date.isoformat() if creation_date else None,
             "expiration_date": expiration_date.isoformat() if expiration_date else None,
             "updated_date": updated_date.isoformat() if updated_date else None,
             "domain_age_days": domain_age,
-            "registrant_country": w.get("country"),
+            "registrant_country": clean_untrusted_string(w.get("country"), max_len=100),
             "privacy_protected": privacy_protected,
-            "name_servers": sorted(set(name_servers)),
+            "name_servers": sorted({clean_untrusted_string(ns, max_len=255) for ns in name_servers}),
         }
     except asyncio.TimeoutError:
         return {"error": "timeout", "detail": "WHOIS lookup timed out after 15s.", "domain": domain}

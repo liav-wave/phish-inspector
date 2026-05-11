@@ -147,6 +147,9 @@ _check_api_keys()
 if __name__ == "__main__":
     transport = sys.argv[1] if len(sys.argv) > 1 else "stdio"
     if transport == "http":
+        # HTTP/streamable-http transport is used only by the legacy Cloud Run
+        # deployment path (see wip/cloud-run/). The active per-client deployment
+        # is stdio, launched by Claude Desktop via scripts/launch-mcp{,-env}.sh.
         mcp.run(transport="streamable-http")
     else:
         mcp.run()

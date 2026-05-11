@@ -5,7 +5,7 @@ from urllib.parse import urljoin
 import httpx
 
 from phish_triage.utils.errors import sanitize_error
-from phish_triage.utils.validators import validate_url
+from phish_triage.utils.validators import validate_url_with_dns
 
 
 TIMEOUT = 10.0
@@ -30,7 +30,7 @@ async def follow_redirects(url: str, max_redirects: int = 10) -> dict:
     Returns:
         Redirect chain with final destination, or structured error.
     """
-    validation_error = validate_url(url)
+    validation_error = await validate_url_with_dns(url)
     if validation_error:
         return {"error": "invalid_input", "detail": validation_error, "url": url}
 
@@ -83,9 +83,11 @@ async def follow_redirects(url: str, max_redirects: int = 10) -> dict:
 
                 chain.append(hop)
 
-                # Resolve relative redirects and validate next hop.
+                # Resolve relative redirects and validate next hop, including
+                # DNS resolution to catch attacker-controlled hostnames that
+                # point at internal addresses.
                 next_url = urljoin(current_url, resp.headers["location"])
-                next_validation = validate_url(next_url)
+                next_validation = await validate_url_with_dns(next_url)
                 if next_validation:
                     return {
                         "url": url,
