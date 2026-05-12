@@ -3,6 +3,7 @@
 import pytest
 
 from phish_triage.utils.email_parser import (
+    MAX_EMAIL_CHARS,
     extract_urls_from_text,
     extract_links_from_html,
     find_url_mismatches,
@@ -107,3 +108,31 @@ async def test_parse_plain_text_body():
     body = "Check out https://example.com and visit https://test.org"
     result = parse_email_structure(body)
     assert len(result["untrusted_input"]["urls"]) == 2
+
+
+def test_oversize_input_rejected():
+    """An email larger than MAX_EMAIL_CHARS must fail closed before parsing
+    starts — caps the work the parser, the MCP transport, and the analyst
+    LLM will do on a single tool call.
+    """
+    oversize = "a" * (MAX_EMAIL_CHARS + 1)
+    result = parse_email_structure(oversize)
+    assert result["error"] == "input_too_large"
+    assert "untrusted_input" in result
+    assert result["untrusted_input"]["size_chars"] == MAX_EMAIL_CHARS + 1
+    # Make sure the oversize string itself is not echoed back.
+    assert oversize not in str(result)
+
+
+def test_at_limit_input_accepted():
+    """An input exactly at the limit must still be parsed (off-by-one guard)."""
+    body = "Subject: test\n\n" + "x" * (MAX_EMAIL_CHARS - len("Subject: test\n\n"))
+    assert len(body) == MAX_EMAIL_CHARS
+    result = parse_email_structure(body)
+    assert "error" not in result
+    assert "untrusted_input" in result
+
+
+def test_non_string_input_rejected():
+    result = parse_email_structure(b"not a string")  # type: ignore[arg-type]
+    assert result["error"] == "invalid_input"

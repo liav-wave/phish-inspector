@@ -5,7 +5,7 @@ from datetime import datetime, timezone
 
 from phish_triage.utils.errors import sanitize_error
 from phish_triage.utils.sanitize import clean_untrusted_string
-from phish_triage.utils.validators import validate_domain_name
+from phish_triage.utils.validators import validate_domain_strict
 from whois import whois
 
 
@@ -45,7 +45,7 @@ async def whois_lookup(domain: str) -> dict:
         Structured WHOIS data including registrar, dates, age, and privacy status.
     """
     try:
-        domain_error = validate_domain_name(domain)
+        domain_error = validate_domain_strict(domain)
         if domain_error:
             return {"error": "invalid_input", "detail": domain_error, "domain": domain}
 

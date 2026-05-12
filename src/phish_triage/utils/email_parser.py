@@ -8,6 +8,17 @@ from html.parser import HTMLParser
 from phish_triage.utils.sanitize import clean_untrusted_string
 
 
+# Upper bound on the raw email string we will parse. A typical .eml fits in
+# tens of KB; legitimate emails with embedded base64 images can reach a few
+# hundred KB. 1 MiB is a comfortable ceiling that prevents an attacker from
+# coercing the analyst into pasting a giant payload that would dominate the
+# parser, the MCP transport buffer, and (later) the analyst LLM's context.
+# Char count, not byte count: the parser walks characters, so capping char
+# count bounds the work directly. For typical ASCII email content the two
+# are within a small factor anyway.
+MAX_EMAIL_CHARS = 1024 * 1024
+
+
 # Regex patterns
 URL_RE = re.compile(r'https?://[^\s<>"\')\]]+', re.IGNORECASE)
 IP_RE = re.compile(r'\b(?:\d{1,3}\.){3}\d{1,3}\b')
@@ -145,6 +156,22 @@ def find_url_mismatches(links: list[dict]) -> list[dict]:
 
 def parse_email_structure(raw_email: str) -> dict:
     """Parse a raw email and extract all actionable indicators."""
+    if not isinstance(raw_email, str):
+        return {
+            "error": "invalid_input",
+            "detail": "raw_email must be a string",
+            "untrusted_input": {"size_chars": 0},
+        }
+    if len(raw_email) > MAX_EMAIL_CHARS:
+        return {
+            "error": "input_too_large",
+            "detail": (
+                f"Email exceeds {MAX_EMAIL_CHARS} character limit "
+                f"(received {len(raw_email)} chars). Trim the message and retry."
+            ),
+            "untrusted_input": {"size_chars": len(raw_email)},
+        }
+
     msg = email.message_from_string(raw_email, policy=email.policy.default)
 
     all_urls: list[str] = []

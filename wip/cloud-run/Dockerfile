@@ -24,5 +24,10 @@ USER appuser
 
 EXPOSE 8080
 
-# Run MCP server in HTTP mode (Cloud Run injects PORT env var)
+# Run MCP server in HTTP mode (Cloud Run injects PORT env var).
+# The HTTP entry point requires PHISH_TRIAGE_BIND_HOST to be set explicitly;
+# inside the Cloud Run container we bind to all interfaces because the load
+# balancer is the only externally reachable surface. See wip/cloud-run/SECURITY-DEBT.md
+# for the auth posture that must front this before any real client use.
+ENV PHISH_TRIAGE_BIND_HOST=0.0.0.0
 CMD ["python", "-m", "phish_triage", "http"]

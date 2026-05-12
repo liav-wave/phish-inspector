@@ -118,6 +118,11 @@ def validate_ip(ip_str: str) -> str | None:
 # unexpected bytes (CR/LF, spaces, NULs, etc.).
 _DOMAIN_LABEL_RE = re.compile(r'^[A-Za-z0-9._-]{1,253}$')
 
+# A single non-empty label between dots may not start or end with a hyphen
+# and must contain at least one alphanumeric. Per-label cap is 63 chars
+# (RFC 1035). Used for the stricter `validate_domain_strict` variant.
+_STRICT_LABEL_RE = re.compile(r'^(?!-)[A-Za-z0-9_-]{1,63}(?<!-)$')
+
 
 def validate_domain_name(name: str) -> str | None:
     """Conservative syntactic check for DNS names and DKIM selectors.
@@ -127,9 +132,47 @@ def validate_domain_name(name: str) -> str | None:
     where the input came from email headers and will be passed to dnspython
     or python-whois, both of which accept bytes that should never reach a
     network protocol.
+
+    This is the loose form: it accepts DKIM selectors like `s1` (no dot) and
+    rejects only the unambiguous junk. For lookups that *must* be a real
+    multi-label domain (WHOIS, VT/GSB indicator checks), use
+    `validate_domain_strict` instead.
     """
     if not name or not isinstance(name, str):
         return "Empty or non-string domain"
     if not _DOMAIN_LABEL_RE.match(name):
         return "Invalid characters in domain/selector"
+    return None
+
+
+def validate_domain_strict(name: str) -> str | None:
+    """Stricter domain check for callers that must pass a real multi-label
+    domain to a provider API (WHOIS, VirusTotal, Google Safe Browsing).
+
+    On top of `validate_domain_name`'s character/length filter, this rejects:
+      - leading or trailing dot
+      - consecutive dots
+      - single-label names (no dot)
+      - labels that start or end with a hyphen
+      - labels longer than 63 chars
+
+    Pure IP literals are also rejected here — callers wanting IP-or-domain
+    should dispatch on type first.
+    """
+    base = validate_domain_name(name)
+    if base:
+        return base
+    if name.startswith(".") or name.endswith("."):
+        return "Domain must not start or end with a dot"
+    if ".." in name:
+        return "Domain must not contain consecutive dots"
+    labels = name.split(".")
+    if len(labels) < 2:
+        return "Domain must have at least two labels"
+    for label in labels:
+        if not _STRICT_LABEL_RE.match(label):
+            return f"Invalid domain label: {label!r}"
+    # Reject all-numeric final label (looks like an IP, not a domain).
+    if labels[-1].isdigit():
+        return "Domain TLD must not be all-numeric"
     return None

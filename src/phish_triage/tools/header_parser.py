@@ -5,6 +5,7 @@ import email.policy
 import re
 from datetime import datetime
 
+from phish_triage.utils.email_parser import MAX_EMAIL_CHARS
 from phish_triage.utils.errors import sanitize_error
 from phish_triage.utils.sanitize import clean_untrusted_string
 
@@ -114,6 +115,22 @@ async def parse_email_headers(raw_headers: str) -> dict:
         Structured header data including authentication results, relay hops,
         and sender information.
     """
+    if not isinstance(raw_headers, str):
+        return {
+            "error": "invalid_input",
+            "detail": "raw_headers must be a string",
+            "untrusted_input": {"size_chars": 0},
+        }
+    if len(raw_headers) > MAX_EMAIL_CHARS:
+        return {
+            "error": "input_too_large",
+            "detail": (
+                f"Input exceeds {MAX_EMAIL_CHARS} character limit "
+                f"(received {len(raw_headers)} chars). Trim the message and retry."
+            ),
+            "untrusted_input": {"size_chars": len(raw_headers)},
+        }
+
     try:
         msg = email.message_from_string(raw_headers, policy=email.policy.default)
 

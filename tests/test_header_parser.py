@@ -3,6 +3,7 @@
 import pytest
 
 from phish_triage.tools.header_parser import parse_email_headers
+from phish_triage.utils.email_parser import MAX_EMAIL_CHARS
 
 
 async def test_parse_phishing_headers(phishing_email_1):
@@ -87,3 +88,19 @@ async def test_empty_headers():
 async def test_malformed_headers():
     result = await parse_email_headers("This is not a valid email header")
     assert "error" not in result
+
+
+async def test_oversize_input_rejected():
+    """Same DoS-bound contract as parse_email_structure: inputs over
+    MAX_EMAIL_CHARS must fail closed before parsing starts.
+    """
+    oversize = "a" * (MAX_EMAIL_CHARS + 1)
+    result = await parse_email_headers(oversize)
+    assert result["error"] == "input_too_large"
+    assert result["untrusted_input"]["size_chars"] == MAX_EMAIL_CHARS + 1
+    assert oversize not in str(result)
+
+
+async def test_non_string_input_rejected():
+    result = await parse_email_headers(b"bytes not a string")  # type: ignore[arg-type]
+    assert result["error"] == "invalid_input"

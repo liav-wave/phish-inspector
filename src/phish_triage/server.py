@@ -18,10 +18,18 @@ from phish_triage.utils.errors import sanitize_tool
 
 load_dotenv()
 
+# Bind to loopback by default. The active client deployment uses stdio
+# transport (no socket is opened regardless of this value). Wider binds are
+# only meaningful for the legacy Cloud Run path in `wip/cloud-run/`, and that
+# path must opt in explicitly via `PHISH_TRIAGE_BIND_HOST=0.0.0.0`. This
+# prevents an accidental `python -m phish_triage http` on a laptop from
+# exposing an unauthenticated MCP server to the LAN.
+_BIND_HOST = os.environ.get("PHISH_TRIAGE_BIND_HOST", "127.0.0.1")
+
 mcp = FastMCP(
     "Phishing Triage",
     instructions="Email phishing analysis and enrichment tools. Call these tools to gather technical intelligence about suspicious emails.",
-    host="0.0.0.0",
+    host=_BIND_HOST,
     port=int(os.environ.get("PORT", 8080)),
 )
 
@@ -146,11 +154,10 @@ _check_api_keys()
 
 
 if __name__ == "__main__":
-    transport = sys.argv[1] if len(sys.argv) > 1 else "stdio"
-    if transport == "http":
-        # HTTP/streamable-http transport is used only by the legacy Cloud Run
-        # deployment path (see wip/cloud-run/). The active per-client deployment
-        # is stdio, launched by Claude Desktop via scripts/launch-mcp{,-env}.sh.
-        mcp.run(transport="streamable-http")
-    else:
-        mcp.run()
+    # The active per-client deployment is stdio, launched by Claude Desktop
+    # via scripts/launch-mcp{,-env}.sh. HTTP/streamable-http transport is only
+    # used by the legacy Cloud Run path (`wip/cloud-run/`); to keep that path
+    # off by default on client laptops, this entry point is stdio-only. The
+    # Cloud Run container uses `__main__.py http`, which gates HTTP behind a
+    # warning and the `PHISH_TRIAGE_BIND_HOST` env var.
+    mcp.run()

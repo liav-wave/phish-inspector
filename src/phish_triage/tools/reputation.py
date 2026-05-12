@@ -2,14 +2,13 @@
 
 import base64
 import os
-import re
 
 import httpx
 
 from phish_triage.utils.errors import sanitize_error
 from phish_triage.utils.rate_limiter import virustotal_limiter, safe_browsing_limiter
 from phish_triage.utils.sanitize import clean_untrusted_string
-from phish_triage.utils.validators import validate_ip, validate_url
+from phish_triage.utils.validators import validate_domain_strict, validate_ip, validate_url
 
 
 TIMEOUT = 15.0
@@ -20,8 +19,7 @@ def _validate_indicator(indicator: str, indicator_type: str) -> str | None:
     if indicator_type == "ip":
         return validate_ip(indicator)
     elif indicator_type == "domain":
-        if not re.match(r'^[a-zA-Z0-9][a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$', indicator):
-            return "Invalid domain format"
+        return validate_domain_strict(indicator)
     elif indicator_type == "url":
         return validate_url(indicator)
     else:

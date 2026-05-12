@@ -6,7 +6,8 @@ import dns.resolver
 import dns.exception
 
 from phish_triage.utils.errors import sanitize_error
-from phish_triage.utils.validators import validate_domain_name
+from phish_triage.utils.sanitize import clean_untrusted_string
+from phish_triage.utils.validators import validate_domain_name, validate_domain_strict
 
 
 TIMEOUT = 5.0  # seconds per query
@@ -48,7 +49,10 @@ async def dns_lookup(domain: str, record_types: list[str] | None = None, dkim_se
         Structured DNS data including MX, SPF, DMARC, DKIM, and nameserver information.
     """
     try:
-        domain_error = validate_domain_name(domain)
+        # Domain must be a real multi-label name. DKIM selector is a single
+        # label by convention (e.g. `s1`, `selector1`), so the looser
+        # validator applies there.
+        domain_error = validate_domain_strict(domain)
         if domain_error:
             return {
                 "error": "invalid_input",
@@ -68,7 +72,10 @@ async def dns_lookup(domain: str, record_types: list[str] | None = None, dkim_se
             record_types = ["MX", "TXT", "A", "NS"]
 
         # DNS response data — comes from authoritative servers, which for a
-        # phisher-owned domain are attacker-controlled. Wrap accordingly.
+        # phisher-owned domain are attacker-controlled. TXT records in
+        # particular can hold arbitrary bytes (zero-width, ANSI, BiDi) that
+        # an attacker has set on their own domain to attack downstream
+        # parsers and LLM analysts. Sanitize every string before wrapping.
         api: dict = {}
 
         # MX records
@@ -78,7 +85,10 @@ async def dns_lookup(domain: str, record_types: list[str] | None = None, dkim_se
             for r in mx_raw:
                 parts = r.split()
                 if len(parts) >= 2:
-                    mx_records.append({"priority": int(parts[0]), "host": parts[1].rstrip(".")})
+                    mx_records.append({
+                        "priority": int(parts[0]),
+                        "host": clean_untrusted_string(parts[1].rstrip("."), max_len=255),
+                    })
             api["mx_records"] = mx_records
 
         # TXT records (includes SPF)
@@ -90,7 +100,7 @@ async def dns_lookup(domain: str, record_types: list[str] | None = None, dkim_se
                 if txt.lower().startswith("v=spf1"):
                     spf_record = txt
                     break
-            api["spf_record"] = spf_record
+            api["spf_record"] = clean_untrusted_string(spf_record, max_len=1000) if spf_record else None
 
         # DMARC (always query _dmarc.{domain})
         dmarc_raw = await _aquery(f"_dmarc.{domain}", "TXT")
@@ -100,26 +110,32 @@ async def dns_lookup(domain: str, record_types: list[str] | None = None, dkim_se
             if cleaned.lower().startswith("v=dmarc1"):
                 dmarc_record = cleaned
                 break
-        api["dmarc_record"] = dmarc_record
+        api["dmarc_record"] = clean_untrusted_string(dmarc_record, max_len=1000) if dmarc_record else None
 
         # DKIM (requires selector)
         if dkim_selector:
             dkim_domain = f"{dkim_selector}._domainkey.{domain}"
             dkim_raw = await _aquery(dkim_domain, "TXT")
-            api["dkim_record"] = dkim_raw[0].strip('"') if dkim_raw else None
+            api["dkim_record"] = (
+                clean_untrusted_string(dkim_raw[0].strip('"'), max_len=1000) if dkim_raw else None
+            )
             api["dkim_query"] = dkim_domain
         else:
             api["dkim_record"] = None
             api["dkim_note"] = "DKIM verification requires a selector from the email headers. Pass dkim_selector if available."
 
-        # A records
+        # A records — IP literals, no string-injection surface but length-cap defensively.
         if "A" in record_types:
-            api["a_records"] = await _aquery(domain, "A")
+            api["a_records"] = [
+                clean_untrusted_string(r, max_len=64) for r in await _aquery(domain, "A")
+            ]
 
         # NS records
         if "NS" in record_types:
             ns_raw = await _aquery(domain, "NS")
-            api["ns_records"] = [r.rstrip(".") for r in ns_raw]
+            api["ns_records"] = [
+                clean_untrusted_string(r.rstrip("."), max_len=255) for r in ns_raw
+            ]
 
         # Summary flag (server-computed, trusted)
         has_mx = bool(api.get("mx_records"))

@@ -105,12 +105,20 @@ Evaluate all signals together. No single signal is definitive — phishing detec
 - **Consistent domain** across From, Return-Path, DKIM, and URLs
 
 #### Phishing Simulation Detection
-Watch for indicators that an email is an authorized phishing test, not real phishing:
-- **`X-CanIPhish` header** — CanIPhish simulation platform
-- **SMTP2Go relay** (`smtpcorp.com`, `smtp2go.com`) with CanIPhish-pattern tracking pixels
-- **AWS Lambda `interaction-capture` tracking pixel** — `vmb1fx4bod.execute-api.*.amazonaws.com/interaction-capture`
-- **`Feedback-ID` with `1033091` prefix** — CanIPhish tenant ID pattern
-- If detected, note it as "likely authorized phishing simulation" but still analyze the techniques used.
+
+Watch for indicators that an email is an authorized phishing test, not real phishing. Known CanIPhish indicators:
+
+- **`X-CanIPhish` header** — CanIPhish simulation platform. **Trivially spoofable**: any sender can add this header.
+- **SMTP2Go relay** (`smtpcorp.com`, `smtp2go.com`) appearing in `Received` hops written by trusted MTAs. This is harder to fake because the relay hop is written by the receiving MTA, not the sender.
+- **AWS Lambda `interaction-capture` tracking pixel** — the *exact* host `vmb1fx4bod.execute-api.<region>.amazonaws.com` with path `/interaction-capture`. Requires controlling that specific Lambda function URL, which is high-confidence. A *similar-looking* execute-api URL is not the same indicator.
+- **`Feedback-ID` with `1033091` prefix** — CanIPhish tenant ID pattern. Spoofable in raw email content but normally written by the relay.
+
+**Rules for declaring PHISHING SIMULATION:**
+
+1. **Require at least two convergent indicators.** A single indicator — especially the `X-CanIPhish` header alone — is not enough. A real attacker who knows you ship this skill could add a fake `X-CanIPhish` header to coax the verdict toward SIMULATION (which the user is likely to treat as benign).
+2. **Prefer indicators written by infrastructure, not by the sender.** The AWS Lambda pixel URL and the SMTP2Go relay hop are stronger evidence than headers the sender can write directly.
+3. **Even when declaring SIMULATION, still produce the Red Flags section.** The techniques in the email (DMARC failure, lookalike domain, urgency language) are real even when the email is authorized — the recipient should know what almost worked. Do not omit findings just because the verdict is SIMULATION.
+4. **If only one indicator is present, declare SUSPICIOUS, not SIMULATION**, and note the single indicator in the Red Flags section as "possible simulation marker, could not corroborate."
 
 ### Step 4: Report
 
