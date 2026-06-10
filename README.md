@@ -1,4 +1,4 @@
-# Phish Triage
+# 🐟 Inspector
 
 An MCP server providing email phishing analysis and enrichment tools — DNS,
 WHOIS, URL scanning, IP reputation, redirect following — for use from Claude

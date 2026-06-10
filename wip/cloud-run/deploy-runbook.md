@@ -1,8 +1,15 @@
-# Phish Triage — Per-Client Deploy Runbook
+# Phish Triage — Cloud Run Per-Client Deploy Runbook (legacy)
 
-Internal Wavefront doc. End-to-end procedure for deploying a single-tenant Phish Triage instance for a new client.
+> **Status:** This runbook describes the original Cloud Run deployment path,
+> which is **not in active use**. Current production clients use the local-stdio
+> path documented in `docs/internal/desktop-skill-deploy.md`. Before resurrecting
+> this path for a new client, read `SECURITY-DEBT.md` in this directory.
 
-This runbook uses **GRIFFON** as the example. For other clients, substitute codenames and contact details.
+Internal Wavefront doc. End-to-end procedure for deploying a single-tenant Phish
+Triage instance for a new client via Cloud Run.
+
+This runbook uses **GRIFFON** as the example. For other clients, substitute
+codenames and contact details.
 
 ---
 
@@ -15,7 +22,7 @@ This runbook uses **GRIFFON** as the example. For other clients, substitute code
   - Google Safe Browsing
   - AbuseIPDB
   - **VirusTotal: skip.** Open ToS issue around commercial use. Do not provision the secret for new client deploys until resolved.
-- [ ] Client contact's Google Workspace email confirmed (e.g., `paul@griffon.example`).
+- [ ] Client contact's Google Workspace email confirmed.
 - [ ] Client contact has `gcloud` installed locally, or is willing to install it.
 
 ---
@@ -35,7 +42,7 @@ echo -n "SAFEBROWSE_KEY" | gcloud secrets create google-safe-browsing-api-key --
 echo -n "ABUSEIPDB_KEY"  | gcloud secrets create abuseipdb-api-key --data-file=-
 ```
 
-`scripts/deploy.sh` references the VirusTotal secret in `--set-secrets`. **For VT-disabled clients, do not run the script as-is** — use the inline command below instead:
+`deploy.sh` (in this directory) references the VirusTotal secret in `--set-secrets`. **For VT-disabled clients, do not run the script as-is** — use the inline command below instead:
 
 ```bash
 gcloud builds submit --tag gcr.io/$GCP_PROJECT_ID/phish-triage .
@@ -51,7 +58,7 @@ gcloud run deploy phish-triage \
   --set-secrets "URLSCAN_API_KEY=urlscan-api-key:latest,GOOGLE_SAFE_BROWSING_API_KEY=google-safe-browsing-api-key:latest,ABUSEIPDB_API_KEY=abuseipdb-api-key:latest"
 ```
 
-Capture the printed URL. The MCP endpoint Paul needs is `<URL>/mcp`.
+Capture the printed URL. The MCP endpoint to provide to the client contact is `<URL>/mcp`.
 
 ---
 
@@ -60,7 +67,7 @@ Capture the printed URL. The MCP endpoint Paul needs is `<URL>/mcp`.
 ```bash
 gcloud run services add-iam-policy-binding phish-triage \
   --region=us-central1 \
-  --member='user:paul@griffon.example' \
+  --member='user:<client-contact-email>' \
   --role='roles/run.invoker'
 ```
 
@@ -68,12 +75,12 @@ gcloud run services add-iam-policy-binding phish-triage \
 
 ## Hand-off package
 
-Send Paul:
+Send the client contact:
 
 1. **The skill** — current `.claude/skills/phish-triage/` directory (containing `SKILL.md`) from the repo.
 2. **The user guide** — `docs/phish-triage-guide.md`.
 3. **An MCP config snippet** with the deployed URL pre-filled. Use the example in the user guide as the template — replace `<URL provided by Wavefront>` with `<deployed-url>/mcp`.
-4. **A note on auth** — confirm Paul has `gcloud` installed and is signed in as the email you granted access to.
+4. **A note on auth** — confirm the client contact has `gcloud` installed and is signed in as the email you granted access to.
 
 A 15-min screenshare for the first install is worth offering — most snags are gcloud/auth confusion, not the skill itself.
 
@@ -95,7 +102,7 @@ No central registry yet. For each deploy, record (in memory or a private gist):
 
 ## Known sharp edges
 
-1. **Identity token expires hourly.** `gcloud auth print-identity-token` returns a 1h token. If Cowork doesn't re-evaluate the `$(...)` shell expansion in `headers` on each request, Paul's connection will silently fail after an hour. Workarounds documented in the user guide: restart Cowork, or paste a fresh token manually. Longer-term fix: switch to IAP + load balancer for proper SSO (per the original deployment plan, not yet implemented).
+1. **Identity token expires hourly.** `gcloud auth print-identity-token` returns a 1h token. If Cowork doesn't re-evaluate the `$(...)` shell expansion in `headers` on each request, the client's connection will silently fail after an hour. Workarounds documented in the user guide: restart Cowork, or paste a fresh token manually. Longer-term fix: switch to IAP + load balancer for proper SSO (per the original deployment plan, not yet implemented).
 
 2. **`deploy.sh` hard-codes the VT secret.** Either patch the script per-client, parameterize it, or use the inline gcloud command above. **Do not** create an empty VT secret to satisfy the script — Secret Manager rejects empty payloads, and a dummy non-empty value would route to the real VT API at request time.
 
@@ -110,9 +117,9 @@ No central registry yet. For each deploy, record (in memory or a private gist):
 export GCP_PROJECT_ID=<client-project>
 # Re-run the gcloud builds + gcloud run deploy commands above.
 ```
-Paul does not need to do anything — the URL is unchanged.
+The client does not need to do anything — the URL is unchanged.
 
-**Skill update:** email Paul the new `phish-triage.md`, ask him to drop it into `~/.claude/skills/` and restart Cowork.
+**Skill update:** send the client the new `phish-triage.md` and ask them to drop it into `~/.claude/skills/` and restart Cowork.
 
 **API key rotation:** see `CLAUDE.md` → Incident Response. Same process for routine rotation: add a new secret version, redeploy.
 
@@ -131,7 +138,7 @@ gcloud secrets delete abuseipdb-api-key
 # gcloud projects delete $GCP_PROJECT_ID
 ```
 
-Tell Paul to:
+Tell the client to:
 
 - Remove `~/.claude/skills/phish-triage/` (directory)
 - Remove the `phish-triage` entry from `~/.claude/settings.json`
