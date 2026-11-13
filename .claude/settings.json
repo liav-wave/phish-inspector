@@ -1,5 +1,18 @@
 {
   "permissions": {
+    "allow": [
+      "Bash(uv run pytest *)",
+      "Bash(uv run pip-audit *)",
+      "Bash(/Users/liav/projects/cheese-inspector/audit/bin/python /Users/liav/projects/cheese-inspector/cheese_inspector.py *)",
+      "mcp__phish-triage__tool_parse_email_headers",
+      "mcp__phish-triage__tool_extract_email_indicators",
+      "mcp__phish-triage__tool_dns_lookup",
+      "mcp__phish-triage__tool_whois_lookup",
+      "mcp__phish-triage__tool_scan_url",
+      "mcp__phish-triage__tool_check_reputation",
+      "mcp__phish-triage__tool_check_abuse_ip",
+      "mcp__phish-triage__tool_follow_redirects"
+    ],
     "deny": [
       "Read(**/.env)",
       "Read(**/.env.*)",
